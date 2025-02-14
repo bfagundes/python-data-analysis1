@@ -16,22 +16,34 @@ for column in range (total_columns):
     if df.columns[column][1] in ("ignore"):
         continue
 
+    # Retrieve all unique answers on the column
     unique_answers = df.iloc[:, column].unique()
     
+    # Loop through each unique answer
     q = Question()
     for answer in unique_answers:
+        # Update the object data
         q.question = df.columns[column][0]
         q.answers[answer] = df.iloc[:, column].value_counts(normalize=False, dropna=False)[answer]
         q.num_answers += df.iloc[:, column].value_counts(normalize=False, dropna=False)[answer]
+
+    # Add the Question object to a list
     question_list.append(q)
 
+    # Print the object - For troubleshooting purposes
     print(q)
 
+    # Write a CSV file with the questions and answers data
     with open('output.csv', mode='w', encoding='utf-8', newline='') as output_csv_file:
         output_writer = csv.writer(output_csv_file, delimiter=";", quotechar='"', quoting=csv.QUOTE_MINIMAL)
         
+        # Looping through each of the questions
         for question in question_list:
             output_writer.writerow([question.question])
+
+            # Looping through each of the answers 
             for answer in question.answers:
                 output_writer.writerow([answer, question.answers[answer], question.answers[answer]/question.num_answers])
+        
+        # This doesnt work
         output_writer.writerow("\n")
