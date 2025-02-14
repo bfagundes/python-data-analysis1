@@ -2,8 +2,12 @@ import pandas as pd
 import csv
 from question import Question
 
+# Variables
+input_file = 'Cuestionario para Comunidad Alumni UTPL_final.csv'
+output_file = 'output.csv'
+
 # Set up header with two lines, 0 = column title, 1 = flag (ignore, open_question, fixed_question)
-df = pd.read_csv('Cuestionario para Comunidad Alumni UTPL_final.csv', sep=";", header=[0,1])
+df = pd.read_csv(input_file, sep=";", header=[0,1])
 print(f"The file has {df.shape} (rows x columns)")
 
 total_columns = len(df.columns)
@@ -36,7 +40,7 @@ for column in range (total_columns):
     question_list.append(q)
 
 # Write a CSV file with the questions and answers data
-with open('output.csv', mode='w', encoding='ansi', errors='ignore', newline='') as output_csv_file:
+with open(output_file, mode='w', encoding='ansi', errors='ignore', newline='') as output_csv_file:
     output_writer = csv.writer(output_csv_file, delimiter=";", quotechar='"', quoting=csv.QUOTE_MINIMAL)
     
     # Looping through each of the questions
