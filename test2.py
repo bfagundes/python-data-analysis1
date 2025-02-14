@@ -4,7 +4,7 @@ from question import Question
 #import matplotlib.pyplot as plt
 
 # Set up header with two lines, 0 = column title, 1 = flag (ignore, open_question, fixed_question)
-df = pd.read_csv('Cuestionario_UTPJ.csv', sep=";", header=[0,1])
+df = pd.read_csv('Cuestionario para Comunidad Alumni UTPL_final.csv', sep=";", header=[0,1])
 print(f"The file has {df.shape} rows x columns")
 
 total_columns = len(df.columns)
@@ -16,22 +16,22 @@ for column in range (total_columns):
     if df.columns[column][1] in ("ignore"):
         continue
 
-    # Retrieve all unique answers on the column
-    unique_answers = df.iloc[:, column].unique()
+    # Retrieve all unique answers on the column | .dropna() removes the NaN values
+    unique_answers = df.iloc[:, column].dropna().unique()
+    print(unique_answers)
     
     # Loop through each unique answer
     q = Question()
+    q.question = df.columns[column][0]
+
     for answer in unique_answers:
         # Update the object data
-        q.question = df.columns[column][0]
-        q.answers[answer] = df.iloc[:, column].value_counts(normalize=False, dropna=False)[answer]
-        q.num_answers += df.iloc[:, column].value_counts(normalize=False, dropna=False)[answer]
-
+        answer_count = df.iloc[:, column].value_counts(normalize=True, dropna=True)[answer]
+        q.answers[answer] = answer_count
+        q.num_answers += answer_count
+            
     # Add the Question object to a list
     question_list.append(q)
-
-    # Print the object - For troubleshooting purposes
-    print(q)
 
     # Write a CSV file with the questions and answers data
     with open('output.csv', mode='w', encoding='ansi', errors='ignore', newline='') as output_csv_file:
@@ -47,6 +47,3 @@ for column in range (total_columns):
             # Looping through each of the answers 
             for answer in sorted_answers:
                 output_writer.writerow([answer, question.answers[answer]/question.num_answers, question.answers[answer]])
-        
-        # This doesnt work
-        output_writer.writerow("\n")
