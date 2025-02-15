@@ -3,7 +3,7 @@ import csv
 from question import Question
 
 # Variables
-input_file = 'Cuestionario para Comunidad Alumni UTPL_final.csv'
+input_file = 'Cuestionario para Profesores e Investigadores_final.csv'
 output_file = 'output.csv'
 
 # Set up header with two lines, 0 = column title, 1 = flag (ignore, open_question, fixed_question)
@@ -21,7 +21,6 @@ for column in range (total_columns):
 
     # Retrieve all unique answers on the column | .dropna() removes the NaN values
     unique_answers = df.iloc[:, column].dropna().unique()
-    #print(unique_answers)
     
     # Loop through each unique answer
     q = Question()
@@ -33,8 +32,8 @@ for column in range (total_columns):
         answers_normalized = df.iloc[:, column].value_counts(normalize=True, dropna=True)[answer]
         answers_count = df.iloc[:, column].value_counts(normalize=False, dropna=True)[answer]
 
-        q.answers[answer] = answers_normalized
-        q.num_answers += answers_count
+        q.answers[answer] = float(answers_normalized)
+        q.num_answers += int(answers_count)
             
     # Add the Question object to a list
     question_list.append(q)
@@ -48,10 +47,12 @@ with open(output_file, mode='w', encoding='ansi', errors='ignore', newline='') a
         output_writer.writerow([question.question])
 
         # Sorting answers
-        sorted_answers = dict(sorted(question.answers.items(), key=lambda item: item[1], reverse=True))
+        question.sort_answers()
 
         # Looping through each of the answers 
-        for answer in sorted_answers:
-            output_writer.writerow([answer, question.answers[answer], question.answers[answer] * question.num_answers])
+        for answer in question.answers:
+            answers_normalized = question.answers[answer]
+            answers_count = int(question.answers[answer] * question.num_answers)
+            output_writer.writerow([answer, answers_normalized, answers_count])
 
 print(f"Process completed successfully.")

@@ -9,3 +9,6 @@ class Question:
         for key, value in self.answers.items():
             result += f"\n{key}: {value}"
         return result
+    
+    def sort_answers(self):
+        self.answers = dict(sorted(self.answers.items(), key=lambda item: item[1], reverse=True))
