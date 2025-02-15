@@ -179,3 +179,4 @@ outline.txt
 # Project specific files
 *.csv
 *.xlsx
+config.py

@@ -3,7 +3,7 @@ import csv
 from question import Question
 
 # Variables
-input_file = 'Cuestionario para Profesores e Investigadores_final.csv'
+input_file = 'input.csv'
 output_file = 'output.csv'
 max_answers_per_question = 10
 max_answers_spill_label = "Otros"
@@ -11,6 +11,7 @@ max_answers_spill_label = "Otros"
 # Load CSV with a multi-line header (first line = column title, second line = flag)
 df = pd.read_csv(input_file, sep=";", header=[0,1])
 print(f"The file has {df.shape} (rows x columns)")
+print(f"Processing ...")
 
 # Get the total number of columns and rows
 total_columns = len(df.columns)
