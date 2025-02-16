@@ -19,7 +19,7 @@ pip install pandas
 ```
 
 ## Usage
-The `input.csv` file format used for this project follows this format, for each column
+The `input.csv` file format used for this project follows this format, for each column:
 - On the first line it contains a header, anything really.
 - On the second line it contains an optional tag, used to identify special questions
     - e.g.: ignore, multi_choice, open_question, etc.
