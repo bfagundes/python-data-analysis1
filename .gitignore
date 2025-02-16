@@ -180,6 +180,5 @@ outline.txt
 *.csv
 *.xls
 *.xlsx
-*.doc
 *.docx
 config.py
