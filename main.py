@@ -18,14 +18,41 @@ total_columns = len(df.columns)
 total_rows = len(df.index)
 question_list = [] # List to store processed questions
 
-def handle_question_multi_choice(column_index):
+def handle_question_multi_choice(column_index, separator = ";"):
     """
     Handles multi-choice type questions, separated by ;
 
     Args:
         column_index (int): The column index from the input file
+        separator (string, optional): The answer separator. Defaults to ';'
     """
-    pass
+    # Retrieve all unique answers in the column, dropping NaN values
+    all_answers = df.iloc[:, column_index].dropna().unique()
+
+    # Create a new Question object for this column
+    q = Question()
+    q.question = df.columns[column_index][0] # Store the question text
+
+    # Loop through each response in the column
+    choice_counts = {}
+    for response in all_answers:
+        # Split the response into individual items
+        choices = response.split(separator)
+        for choice in choices:
+            choice = choice.strip() # Remove extra spaces
+            if choice:
+                choice_counts[choice] = choice_counts.get(choice, 0) + 1 # Couting
+
+    # Get total responses for normalization
+    total_responses = sum(choice_counts.values())
+
+    # Store the processed data in the Question object
+    for choice, count in choice_counts.items():
+        q.answers[choice] = count / total_responses # Normalized 
+        q.num_answers += count # Absolute
+
+    # Add the processed question object to the list
+    question_list.append(q)
 
 def handle_question_default(column_index):
     """
