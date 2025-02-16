@@ -1,23 +1,6 @@
 import pandas as pd
 from docx import Document
-
-intro_text = """¡Bienvenido(a)!
-
-En el marco de la elaboración del Plan Estratégico de Internacionalización, Intercul-
-turalidad y Relacionamiento de nuestra universidad, es esencial contar con informa-
-ción precisa y relevante desde cada uno de los vicerrectorados y direcciones. Reco-
-nocendo que cada dependencia tiene características particulares, solicitamos su 
-participación en este cuestionário, con la participación activa y colaboración de su 
-equipo, hasta 13 de febrero. Necesitamos una única respuesta por vicerrectorado/dirección.
-
-Los datos recopilados se utilizarán exclusivamente con fines de mejora de nuestros 
-servicios y serán tratados con total confidencialidad, de acuerdo con las directrices 
-de la Ley General de Protección de Datos (LGPD). La identidad de los participantes 
-será protegida en todas las etapas del proceso. Para más información sobre la LGPD, 
-acceda a: www.planalto.gov.br/ccivil 03/_ato2015-2018/2018/lei/113709.htm.
-
-En caso de dudas, pedimos entrar en contactar con nuestra consultoria IHub —
-ihub@ihubeducacional.com.br."""
+from config import document_intro_text
 
 # Variables
 input_file = 'survey_input.xlsx'
@@ -37,7 +20,7 @@ print(f"Processing ...")
 
 # Add the document title and intro text
 doc.add_paragraph(df.columns[0][0])
-doc.add_paragraph(intro_text)
+doc.add_paragraph(document_intro_text)
 
 # Extract relevant columns from the DataFrame
 col_order = df.iloc[:, 0].values
