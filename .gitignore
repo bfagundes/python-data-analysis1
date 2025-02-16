@@ -178,5 +178,8 @@ outline.txt
 
 # Project specific files
 *.csv
+*.xls
 *.xlsx
+*.doc
+*.docx
 config.py
