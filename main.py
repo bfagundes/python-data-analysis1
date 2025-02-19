@@ -1,5 +1,5 @@
 import pandas as pd
-import csv, string
+import csv, string, spacy
 from question import Question
 import numpy as np
 from sklearn.cluster import KMeans
@@ -55,6 +55,34 @@ def handle_question_multi_choice(column_index, separator = ";"):
         q.answers[choice] = count / total_responses # Normalized 
         q.num_answers += count # Absolute
 
+    # Add the processed question object to the list
+    question_list.append(q)
+
+def handle_question_default(column_index):
+    """
+    Handles all questions that doesn't fall into more specific functions
+
+    Args:
+        column_index (int): The column index from the input file
+    """
+    # Retrieve all unique answers in the column, dropping NaN values
+    unique_answers = df.iloc[:, column_index].dropna().unique()
+    
+    # Create a new Question object for this column
+    q = Question()
+    q.question = df.columns[column_index][0] # Store the question text
+
+    # Loop through each unique answer in the column
+    for answer in unique_answers:
+
+        # Get the proportion (normalized count) of this answer AND the absolute count
+        answers_normalized = df.iloc[:, column_index].value_counts(normalize=True, dropna=True)[answer]
+        answers_count = df.iloc[:, column_index].value_counts(normalize=False, dropna=True)[answer]
+
+        # Store the info on the object
+        q.answers[answer] = float(answers_normalized)
+        q.num_answers += int(answers_count)
+            
     # Add the processed question object to the list
     question_list.append(q)
 
@@ -169,6 +197,30 @@ def cluster_responses(question, n_clusters=5, top_n=3):
     
     return labels, cluster_names
 
+def remove_stopwords_and_lemmatize_spanish(text: str) -> str:
+    """
+    Uses spaCy (Spanish) to:
+      - tokenize
+      - remove stopwords and punctuation
+      - lemmatize tokens
+    Returns a cleaned, lemmatized string.
+    """
+
+    # Load spaCy's small Spanish model
+    nlp = spacy.load("es_core_news_sm")
+
+    # Process the text with spaCy
+    doc = nlp(text.lower().strip())
+    
+    # Build a list of lemmas, skipping stopwords and punctuation
+    lemmas = []
+    for token in doc:
+        # Skip stopwords, punctuation, or empty lemmas
+        if not token.is_stop and not token.is_punct and token.lemma_.strip():
+            lemmas.append(token.lemma_)
+    
+    return " ".join(lemmas)
+
 def handle_open_question(column_index):
     """
     Handles open-ended text questions. For each row:
@@ -176,12 +228,13 @@ def handle_open_question(column_index):
       - Flags invalid/gibberish if it fails the `is_gibberish()` check.
       - Collects the cleaned responses.
       - Vectorizes them (TF-IDF).
+      - Catches empty vocabulary errors.
       - Clusters them and assigns cluster names based on top keywords.
     """
     q = Question()
     q.question = df.columns[column_index][0]
-    print("---------- ---------- ---------- ---------- ----------")
-    print(f"Processing open question: {q.question}")
+    print("\n---------- Handling open question ----------")
+    print(f"Question: {q.question}")
 
     # List to hold the cleaned versions of each response
     cleaned_responses = []
@@ -192,65 +245,30 @@ def handle_open_question(column_index):
         if is_gibberish(cleaned):
             cleaned = "Invalid/Gibberish/NA"
         cleaned_responses.append(cleaned)
-    
+
     # Store the cleaned responses in the Question object
     q.cleaned_responses = cleaned_responses
 
-    # Vectorize with TF-IDF
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform(cleaned_responses)
-    q.tfidf_matrix = tfidf_matrix
-    q.feature_names = vectorizer.get_feature_names_out()
-
-    # Now cluster the responses
-    labels, cluster_keywords = cluster_responses(q, n_clusters=5, top_n=3)
-
-    # Optionally, store these cluster labels or keywords on the question object
-    q.cluster_labels = labels
-    q.cluster_names = cluster_keywords
-
-    question_list.append(q)
-
-def handle_open_question(column_index):
-    """
-    Handles open-ended text questions. For each row:
-      - Cleans the response (remove punctuation, lowercase, strip whitespace).
-      - Flags invalid/gibberish if it fails the `is_gibberish()` check.
-      - Collects responses for TF-IDF vectorization.
-    """
-    q = Question()
-    q.question = df.columns[column_index][0]  # Store the question text
-    print("---------- ---------- ---------- ---------- ----------")
-    print(q.question)
-
-    # Collect cleaned (or gibberish-labeled) responses here
-    cleaned_responses = []
-
-    # We iterate over the entire column (dropping NaN)
-    for original_answer in df.iloc[:, column_index].dropna():
-        cleaned = clean_response(original_answer)
-        print(cleaned)
-        
-        if is_gibberish(cleaned):
-            cleaned = "Invalid/Gibberish/NA"
-            print(cleaned)
-            print()
-
-        cleaned_responses.append(cleaned)
-
-    # Now that all responses have been collected and cleaned, vectorize them.
-    # This turns the list of strings into a TF-IDF matrix.
-    if cleaned_responses:
-        vectorizer, tfidf_matrix = vectorize_text(cleaned_responses)
-
-        # You can store the vectorizer and matrix in the Question object,
-        # or handle them however you like.
-        q.vectorizer = vectorizer
+    # Vectorize with TF-IDF; catch the empty vocabulary error
+    try:
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform(cleaned_responses)
         q.tfidf_matrix = tfidf_matrix
-        # Example: you might store the feature names as well
         q.feature_names = vectorizer.get_feature_names_out()
 
-    # Finally, add the processed question to your question list
+        # Now cluster the responses, if desired
+        labels, cluster_keywords = cluster_responses(q, n_clusters=5, top_n=3)
+        q.cluster_labels = labels
+        q.cluster_names = cluster_keywords
+
+    except ValueError as e:
+        # Typically happens if the documents are empty or only contain stop words
+        print(f"Could not vectorize (ValueError): {e}")
+        q.tfidf_matrix = None
+        q.feature_names = []
+        # Decide how you want to handle the cluster flow in this scenario
+        # e.g., skip clustering or just store empty data
+
     question_list.append(q)
 
 def write_csv():
