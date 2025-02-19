@@ -1,7 +1,7 @@
 import pandas as pd
+import numpy as np
 import csv, string, spacy
 from question import Question
-import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -15,11 +15,11 @@ max_answers_spill_label = "Otros"
 nlp = spacy.load("es_core_news_sm")
 
 # Load CSV with a multi-line header (first line = column title, second line = flag)
-df = pd.read_csv(input_file, sep=";", header=[0,1])
+survey_data = pd.read_csv(input_file, sep=";", header=[0,1])
 
 # Get the total number of columns and rows
-total_columns = len(df.columns)
-total_rows = len(df.index)
+total_columns = len(survey_data.columns)
+total_rows = len(survey_data.index)
 question_list = [] # List to store processed questions
 
 print(f"The file has {total_rows} rows and {total_columns} columns)")
@@ -34,11 +34,11 @@ def handle_question_multi_choice(column_index, separator = ";"):
         separator (string, optional): The answer separator. Defaults to ';'
     """
     # Retrieve all unique answers in the column, dropping NaN values
-    all_answers = df.iloc[:, column_index].dropna().unique()
+    all_answers = survey_data.iloc[:, column_index].dropna().unique()
 
     # Create a new Question object for this column
     q = Question()
-    q.question = df.columns[column_index][0] # Store the question text
+    q.question = survey_data.columns[column_index][0] # Store the question text
 
     # Loop through each response in the column
     choice_counts = {}
@@ -69,18 +69,18 @@ def handle_question_default(column_index):
         column_index (int): The column index from the input file
     """
     # Retrieve all unique answers in the column, dropping NaN values
-    unique_answers = df.iloc[:, column_index].dropna().unique()
+    unique_answers = survey_data.iloc[:, column_index].dropna().unique()
     
     # Create a new Question object for this column
     q = Question()
-    q.question = df.columns[column_index][0] # Store the question text
+    q.question = survey_data.columns[column_index][0] # Store the question text
 
     # Loop through each unique answer in the column
     for answer in unique_answers:
 
         # Get the proportion (normalized count) of this answer AND the absolute count
-        answers_normalized = df.iloc[:, column_index].value_counts(normalize=True, dropna=True)[answer]
-        answers_count = df.iloc[:, column_index].value_counts(normalize=False, dropna=True)[answer]
+        answers_normalized = survey_data.iloc[:, column_index].value_counts(normalize=True, dropna=True)[answer]
+        answers_count = survey_data.iloc[:, column_index].value_counts(normalize=False, dropna=True)[answer]
 
         # Store the info on the object
         q.answers[answer] = float(answers_normalized)
@@ -196,14 +196,14 @@ def handle_open_question(column_index):
       - Clusters them.
     """
     q = Question()
-    q.question = df.columns[column_index][0]
+    q.question = survey_data.columns[column_index][0]
     print("\n---------- Handling open question ----------")
     print(f"Question: {q.question}")
 
     cleaned_responses = []
 
     # Iterate over each row's answer, dropping NaN
-    for original_answer in df.iloc[:, column_index].dropna():
+    for original_answer in survey_data.iloc[:, column_index].dropna():
         # Step 1: Basic cleaning (punctuation, lower, etc.)
         basic_cleaned = clean_response(original_answer)
         # Step 2: Spanish stopword removal + lemmatization
@@ -261,15 +261,15 @@ def write_csv():
 for column_index in range (total_columns):
     
     # Skip columns marked as "ignore" in the second header row
-    if df.columns[column_index][1] in ("ignore"):
+    if survey_data.columns[column_index][1] in ("ignore"):
         continue
 
     # Handle multi choice questions
-    elif df.columns[column_index][1] in ("multi_choice"):
+    elif survey_data.columns[column_index][1] in ("multi_choice"):
         handle_question_multi_choice(column_index)
 
     # Handle open questions
-    elif df.columns[column_index][1] in ("open"):
+    elif survey_data.columns[column_index][1] in ("open"):
         handle_open_question(column_index)
 
     # handle all other questions
