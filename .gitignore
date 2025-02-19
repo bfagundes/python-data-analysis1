@@ -182,3 +182,5 @@ outline.txt
 *.xlsx
 *.docx
 config.py
+specs.md
+plan.md

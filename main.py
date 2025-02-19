@@ -1,5 +1,5 @@
 import pandas as pd
-import csv
+import csv, string
 from question import Question
 
 # Variables
@@ -10,13 +10,14 @@ max_answers_spill_label = "Otros"
 
 # Load CSV with a multi-line header (first line = column title, second line = flag)
 df = pd.read_csv(input_file, sep=";", header=[0,1])
-print(f"The file has {df.shape} (rows, columns)")
-print(f"Processing ...")
 
 # Get the total number of columns and rows
 total_columns = len(df.columns)
 total_rows = len(df.index)
 question_list = [] # List to store processed questions
+
+print(f"The file has {total_rows} rows and {total_columns} columns)")
+print(f"Processing ...")
 
 def handle_question_multi_choice(column_index, separator = ";"):
     """
@@ -52,6 +53,67 @@ def handle_question_multi_choice(column_index, separator = ";"):
         q.num_answers += count # Absolute
 
     # Add the processed question object to the list
+    question_list.append(q)
+
+def clean_response(text: str) -> str:
+    """
+    Removes punctuation, lowercases text, and strips extra whitespace.
+    """
+    # Lowercase
+    text = text.lower()
+    # Remove punctuation
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    # Strip whitespace
+    text = text.strip()
+    return text
+
+def is_gibberish(text: str) -> bool:
+    """
+    Naive check to identify gibberish or invalid answers.
+    """
+    # Check if equal to no
+    #if text == "no":
+        #return False
+
+    # Check if too short (<= 2 chars)
+    if len(text) <= 2:
+        return True
+    
+    # Check if it has at least one vowel
+    vowels = set("aeiou")
+    if not any(ch in vowels for ch in text):
+        return True
+    
+    # Check if it is purely numeric
+    if text.isdigit():
+        return True
+
+    # Otherwise, consider it valid
+    return False
+
+def handle_open_question(column_index):
+    """
+    Handles open-ended text questions. For each row:
+      - Cleans the response (remove punctuation, lowercase, strip whitespace).
+      - Flags invalid/gibberish if it fails the `is_gibberish()` check.
+      - Aggregates counts of valid vs. invalid responses.
+    """
+    # Create a new Question object for this column
+    q = Question()
+    q.question = df.columns[column_index][0]  # Store the question text
+    print("---------- ---------- ---------- ---------- ----------")
+    print(q.question)
+
+    # We iterate over the entire column (dropping NaN)
+    for original_answer in df.iloc[:, column_index].dropna():
+        cleaned = clean_response(original_answer)
+        print(cleaned)
+        
+        if is_gibberish(cleaned):
+            cleaned = "Invalid/Gibberish/NA"  # or however you want to label it
+            print(cleaned)
+            print()
+
     question_list.append(q)
 
 def handle_question_default(column_index):
@@ -111,6 +173,10 @@ for column_index in range (total_columns):
     # Handle multi choice questions
     elif df.columns[column_index][1] in ("multi_choice"):
         handle_question_multi_choice(column_index)
+
+    # Handle open questions
+    elif df.columns[column_index][1] in ("open"):
+        handle_open_question(column_index)
 
     # handle all other questions
     else:

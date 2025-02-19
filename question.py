@@ -10,7 +10,6 @@ class Question:
             result += f"\n{key}: {value}"
         return result
     
-   
     def sort_answers(self):
         """
         Sorts the answers by the answer_count, descending
