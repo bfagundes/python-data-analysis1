@@ -11,6 +11,9 @@ output_file = 'output.csv'
 max_answers_per_question = 10
 max_answers_spill_label = "Otros"
 
+# Load the Spanish language model
+nlp = spacy.load("es_core_news_sm")
+
 # Load CSV with a multi-line header (first line = column title, second line = flag)
 df = pd.read_csv(input_file, sep=";", header=[0,1])
 
@@ -88,13 +91,11 @@ def handle_question_default(column_index):
 
 def clean_response(text: str) -> str:
     """
-    Removes punctuation, lowercases text, and strips extra whitespace.
+    Removes punctuation and extra spaces, returns lowercased text.
+    (A simple 'baseline' cleaning before we do deeper Spanish cleaning.)
     """
-    # Lowercase
     text = text.lower()
-    # Remove punctuation
     text = text.translate(str.maketrans('', '', string.punctuation))
-    # Strip whitespace
     text = text.strip()
     return text
 
@@ -131,9 +132,7 @@ def vectorize_text(texts):
     tfidf_matrix = vectorizer.fit_transform(texts)
     return vectorizer, tfidf_matrix
 
-def extract_keywords_from_centroid(
-    cluster_center, feature_names, top_n=3
-):
+def extract_keywords_from_centroid(cluster_center, feature_names, top_n=3):
     """
     Given the cluster center (array of TF-IDF feature weights),
     return the top_n feature names (keywords).
@@ -144,130 +143,98 @@ def extract_keywords_from_centroid(
 
 def cluster_responses(question, n_clusters=5, top_n=3):
     """
-    Clusters the open-ended text responses stored in `question`.
-    Assumes `question.tfidf_matrix` is a valid TF-IDF matrix
-    and `question.feature_names` holds the corresponding feature names.
-    
-    Args:
-        question (Question): A question object with at least these attributes:
-            - question.tfidf_matrix (scipy sparse matrix or np array)
-            - question.feature_names (list of strings)
-            - question.cleaned_responses (list of original or cleaned text)
-        n_clusters (int): How many clusters (K in K-Means)
-        top_n (int): How many representative keywords to extract per cluster
-        
-    Returns:
-        labels (array): Cluster label for each document/response
-        cluster_names (list of list of str): Representative keywords for each cluster
+    Clusters the open-ended text responses using K-Means.
+    Extracts representative keywords from each cluster centroid.
     """
-
-    # If no TF-IDF matrix present, we can’t cluster
-    if not hasattr(question, "tfidf_matrix"):
-        print(f"No tfidf data found for question: {question.question}")
+    if question.tfidf_matrix is None:
+        print(f"No TF-IDF data found for question: {question.question}. Skipping clustering.")
         return None, None
-    
-    X = question.tfidf_matrix  # The TF-IDF feature matrix
-    feature_names = question.feature_names  # The vocabulary list
-    
-    # Example clustering with K-Means
+
+    X = question.tfidf_matrix
+    feature_names = question.feature_names
+
     kmeans = KMeans(n_clusters=n_clusters, random_state=42)
     labels = kmeans.fit_predict(X)
-    
-    # Identify top terms for each cluster using the cluster centroids
+
     cluster_centers = kmeans.cluster_centers_
-    cluster_names = []
-    
+    cluster_keywords = []
+
     for c_index in range(n_clusters):
-        keywords = extract_keywords_from_centroid(
+        top_keywords = extract_keywords_from_centroid(
             cluster_centers[c_index], feature_names, top_n
         )
-        cluster_names.append(keywords)
-    
-    # Store or print the clusters + keywords
+        cluster_keywords.append(top_keywords)
+
+    # Print or log the results
     print(f"\n--- Clustering results for question: '{question.question}' ---")
     for cluster_id in range(n_clusters):
-        print(f"\nCluster {cluster_id} (keywords = {', '.join(cluster_names[cluster_id])}):")
-        
-        # Gather the responses that belong to this cluster
+        print(f"Cluster {cluster_id} (keywords = {', '.join(cluster_keywords[cluster_id])}):")
         doc_indices = np.where(labels == cluster_id)[0]
-        for doc_idx in doc_indices:
-            # Assuming we stored the original or cleaned responses in question.cleaned_responses
-            resp_text = question.cleaned_responses[doc_idx]
-            print(f"   - {resp_text}")
-    
-    return labels, cluster_names
+        for idx in doc_indices:
+            print(f"  - {question.cleaned_responses[idx]}")
+
+    return labels, cluster_keywords
 
 def remove_stopwords_and_lemmatize_spanish(text: str) -> str:
     """
-    Uses spaCy (Spanish) to:
-      - tokenize
-      - remove stopwords and punctuation
-      - lemmatize tokens
-    Returns a cleaned, lemmatized string.
+    Uses spaCy (Spanish) to tokenize, remove stopwords/punctuation, and lemmatize.
     """
-
-    # Load spaCy's small Spanish model
-    nlp = spacy.load("es_core_news_sm")
-
-    # Process the text with spaCy
-    doc = nlp(text.lower().strip())
-    
-    # Build a list of lemmas, skipping stopwords and punctuation
+    doc = nlp(text)
     lemmas = []
     for token in doc:
-        # Skip stopwords, punctuation, or empty lemmas
         if not token.is_stop and not token.is_punct and token.lemma_.strip():
             lemmas.append(token.lemma_)
-    
     return " ".join(lemmas)
 
 def handle_open_question(column_index):
     """
     Handles open-ended text questions. For each row:
-      - Cleans the response (remove punctuation, lowercase, strip whitespace).
+      - Cleans the response (baseline cleaning).
+      - Removes Spanish stopwords & lemmatizes via spaCy.
       - Flags invalid/gibberish if it fails the `is_gibberish()` check.
-      - Collects the cleaned responses.
-      - Vectorizes them (TF-IDF).
-      - Catches empty vocabulary errors.
-      - Clusters them and assigns cluster names based on top keywords.
+      - Vectorizes (TF-IDF).
+      - Clusters them.
     """
     q = Question()
     q.question = df.columns[column_index][0]
     print("\n---------- Handling open question ----------")
     print(f"Question: {q.question}")
 
-    # List to hold the cleaned versions of each response
     cleaned_responses = []
 
-    # Iterate over the entire column, dropping NaN
+    # Iterate over each row's answer, dropping NaN
     for original_answer in df.iloc[:, column_index].dropna():
-        cleaned = clean_response(original_answer)
-        if is_gibberish(cleaned):
-            cleaned = "Invalid/Gibberish/NA"
-        cleaned_responses.append(cleaned)
+        # Step 1: Basic cleaning (punctuation, lower, etc.)
+        basic_cleaned = clean_response(original_answer)
+        # Step 2: Spanish stopword removal + lemmatization
+        advanced_cleaned = remove_stopwords_and_lemmatize_spanish(basic_cleaned)
 
-    # Store the cleaned responses in the Question object
+        # If it's gibberish or too short, label as invalid
+        if is_gibberish(advanced_cleaned):
+            advanced_cleaned = "Invalid/Gibberish/NA"
+        
+        cleaned_responses.append(advanced_cleaned)
+
+    # Store final cleaned responses
     q.cleaned_responses = cleaned_responses
 
-    # Vectorize with TF-IDF; catch the empty vocabulary error
+    # Vectorize with TF-IDF; handle possible empty vocabulary
     try:
         vectorizer = TfidfVectorizer()
         tfidf_matrix = vectorizer.fit_transform(cleaned_responses)
         q.tfidf_matrix = tfidf_matrix
         q.feature_names = vectorizer.get_feature_names_out()
 
-        # Now cluster the responses, if desired
+        # Now cluster the responses
         labels, cluster_keywords = cluster_responses(q, n_clusters=5, top_n=3)
         q.cluster_labels = labels
         q.cluster_names = cluster_keywords
 
     except ValueError as e:
-        # Typically happens if the documents are empty or only contain stop words
+        # Catches "empty vocabulary" errors, etc.
         print(f"Could not vectorize (ValueError): {e}")
         q.tfidf_matrix = None
         q.feature_names = []
-        # Decide how you want to handle the cluster flow in this scenario
-        # e.g., skip clustering or just store empty data
 
     question_list.append(q)
 
