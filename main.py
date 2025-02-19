@@ -1,6 +1,9 @@
 import pandas as pd
 import csv, string
 from question import Question
+import numpy as np
+from sklearn.cluster import KMeans
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 # Variables
 input_file = 'input.csv'
@@ -91,18 +94,137 @@ def is_gibberish(text: str) -> bool:
     # Otherwise, consider it valid
     return False
 
+def vectorize_text(texts):
+    """
+    Applies TF-IDF to a list of documents (strings).
+    Returns the fitted vectorizer and the TF-IDF matrix.
+    """
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(texts)
+    return vectorizer, tfidf_matrix
+
+def extract_keywords_from_centroid(
+    cluster_center, feature_names, top_n=3
+):
+    """
+    Given the cluster center (array of TF-IDF feature weights),
+    return the top_n feature names (keywords).
+    """
+    # Get the indexes of the largest weights
+    top_indices = cluster_center.argsort()[::-1][:top_n]
+    return [feature_names[i] for i in top_indices]
+
+def cluster_responses(question, n_clusters=5, top_n=3):
+    """
+    Clusters the open-ended text responses stored in `question`.
+    Assumes `question.tfidf_matrix` is a valid TF-IDF matrix
+    and `question.feature_names` holds the corresponding feature names.
+    
+    Args:
+        question (Question): A question object with at least these attributes:
+            - question.tfidf_matrix (scipy sparse matrix or np array)
+            - question.feature_names (list of strings)
+            - question.cleaned_responses (list of original or cleaned text)
+        n_clusters (int): How many clusters (K in K-Means)
+        top_n (int): How many representative keywords to extract per cluster
+        
+    Returns:
+        labels (array): Cluster label for each document/response
+        cluster_names (list of list of str): Representative keywords for each cluster
+    """
+
+    # If no TF-IDF matrix present, we can’t cluster
+    if not hasattr(question, "tfidf_matrix"):
+        print(f"No tfidf data found for question: {question.question}")
+        return None, None
+    
+    X = question.tfidf_matrix  # The TF-IDF feature matrix
+    feature_names = question.feature_names  # The vocabulary list
+    
+    # Example clustering with K-Means
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+    labels = kmeans.fit_predict(X)
+    
+    # Identify top terms for each cluster using the cluster centroids
+    cluster_centers = kmeans.cluster_centers_
+    cluster_names = []
+    
+    for c_index in range(n_clusters):
+        keywords = extract_keywords_from_centroid(
+            cluster_centers[c_index], feature_names, top_n
+        )
+        cluster_names.append(keywords)
+    
+    # Store or print the clusters + keywords
+    print(f"\n--- Clustering results for question: '{question.question}' ---")
+    for cluster_id in range(n_clusters):
+        print(f"\nCluster {cluster_id} (keywords = {', '.join(cluster_names[cluster_id])}):")
+        
+        # Gather the responses that belong to this cluster
+        doc_indices = np.where(labels == cluster_id)[0]
+        for doc_idx in doc_indices:
+            # Assuming we stored the original or cleaned responses in question.cleaned_responses
+            resp_text = question.cleaned_responses[doc_idx]
+            print(f"   - {resp_text}")
+    
+    return labels, cluster_names
+
 def handle_open_question(column_index):
     """
     Handles open-ended text questions. For each row:
       - Cleans the response (remove punctuation, lowercase, strip whitespace).
       - Flags invalid/gibberish if it fails the `is_gibberish()` check.
-      - Aggregates counts of valid vs. invalid responses.
+      - Collects the cleaned responses.
+      - Vectorizes them (TF-IDF).
+      - Clusters them and assigns cluster names based on top keywords.
     """
-    # Create a new Question object for this column
+    q = Question()
+    q.question = df.columns[column_index][0]
+    print("---------- ---------- ---------- ---------- ----------")
+    print(f"Processing open question: {q.question}")
+
+    # List to hold the cleaned versions of each response
+    cleaned_responses = []
+
+    # Iterate over the entire column, dropping NaN
+    for original_answer in df.iloc[:, column_index].dropna():
+        cleaned = clean_response(original_answer)
+        if is_gibberish(cleaned):
+            cleaned = "Invalid/Gibberish/NA"
+        cleaned_responses.append(cleaned)
+    
+    # Store the cleaned responses in the Question object
+    q.cleaned_responses = cleaned_responses
+
+    # Vectorize with TF-IDF
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform(cleaned_responses)
+    q.tfidf_matrix = tfidf_matrix
+    q.feature_names = vectorizer.get_feature_names_out()
+
+    # Now cluster the responses
+    labels, cluster_keywords = cluster_responses(q, n_clusters=5, top_n=3)
+
+    # Optionally, store these cluster labels or keywords on the question object
+    q.cluster_labels = labels
+    q.cluster_names = cluster_keywords
+
+    question_list.append(q)
+
+def handle_open_question(column_index):
+    """
+    Handles open-ended text questions. For each row:
+      - Cleans the response (remove punctuation, lowercase, strip whitespace).
+      - Flags invalid/gibberish if it fails the `is_gibberish()` check.
+      - Collects responses for TF-IDF vectorization.
+    """
     q = Question()
     q.question = df.columns[column_index][0]  # Store the question text
     print("---------- ---------- ---------- ---------- ----------")
     print(q.question)
+
+    # Collect cleaned (or gibberish-labeled) responses here
+    cleaned_responses = []
 
     # We iterate over the entire column (dropping NaN)
     for original_answer in df.iloc[:, column_index].dropna():
@@ -110,38 +232,25 @@ def handle_open_question(column_index):
         print(cleaned)
         
         if is_gibberish(cleaned):
-            cleaned = "Invalid/Gibberish/NA"  # or however you want to label it
+            cleaned = "Invalid/Gibberish/NA"
             print(cleaned)
             print()
 
-    question_list.append(q)
+        cleaned_responses.append(cleaned)
 
-def handle_question_default(column_index):
-    """
-    Handles all questions that doesn't fall into more specific functions
+    # Now that all responses have been collected and cleaned, vectorize them.
+    # This turns the list of strings into a TF-IDF matrix.
+    if cleaned_responses:
+        vectorizer, tfidf_matrix = vectorize_text(cleaned_responses)
 
-    Args:
-        column_index (int): The column index from the input file
-    """
-    # Retrieve all unique answers in the column, dropping NaN values
-    unique_answers = df.iloc[:, column_index].dropna().unique()
-    
-    # Create a new Question object for this column
-    q = Question()
-    q.question = df.columns[column_index][0] # Store the question text
+        # You can store the vectorizer and matrix in the Question object,
+        # or handle them however you like.
+        q.vectorizer = vectorizer
+        q.tfidf_matrix = tfidf_matrix
+        # Example: you might store the feature names as well
+        q.feature_names = vectorizer.get_feature_names_out()
 
-    # Loop through each unique answer in the column
-    for answer in unique_answers:
-
-        # Get the proportion (normalized count) of this answer AND the absolute count
-        answers_normalized = df.iloc[:, column_index].value_counts(normalize=True, dropna=True)[answer]
-        answers_count = df.iloc[:, column_index].value_counts(normalize=False, dropna=True)[answer]
-
-        # Store the info on the object
-        q.answers[answer] = float(answers_normalized)
-        q.num_answers += int(answers_count)
-            
-    # Add the processed question object to the list
+    # Finally, add the processed question to your question list
     question_list.append(q)
 
 def write_csv():
