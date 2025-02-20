@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from question import Question
 from text_processing import (
@@ -6,7 +7,9 @@ from text_processing import (
     is_gibberish,
     remove_stopwords_and_lemmatize_spanish,
     vectorize_text,
-    cluster_responses
+    cluster_responses,
+    find_optimal_k_elbow,
+    find_optimal_k_silhouette
 )
 
 INVALID_ANSWER_LABEL = 'Invalid/Gibberish/NA'
@@ -100,18 +103,18 @@ def handle_open_question(survey_data, column_index, question_list):
 
     # Clean and pre-process each response
     for original_answer in survey_data.iloc[:, column_index].dropna():
-        print(f"Origina: {original_answer}")
+        #print(f"Origina: {original_answer}")
         basic_cleaned = clean_response(original_answer)
-        print(f"Cleaned: {basic_cleaned}")
+        #print(f"Cleaned: {basic_cleaned}")
         advanced_cleaned = remove_stopwords_and_lemmatize_spanish(basic_cleaned)
-        print(f"Lematiz: {advanced_cleaned}")
+        #print(f"Lematiz: {advanced_cleaned}")
 
         # If response is considered gibberish, convert to placeholder text
         if is_gibberish(advanced_cleaned):
             advanced_cleaned = INVALID_ANSWER_LABEL
-            print(f"Invalid: {advanced_cleaned}")
+            #print(f"Invalid: {advanced_cleaned}")
 
-        print()
+        #print()
 
         # Adding the cleaned response to the list
         cleaned_responses.append(advanced_cleaned)
@@ -125,8 +128,21 @@ def handle_open_question(survey_data, column_index, question_list):
         q.tfidf_matrix = tfidf_matrix
         q.feature_names = vectorizer.get_feature_names_out()
 
+        # Choosing the cluster number with Elbow or Silhouette
+        # Elbow
+        best_k = find_optimal_k_elbow(tfidf_matrix, k_min=2, k_max=10, plot=True)
+        # Silhouette
+        #best_k = find_optimal_k_silhouette(tfidf_matrix, k_min=2, k_max=10, plot=True)
+
+        unique_rows = np.unique(tfidf_matrix.toarray(), axis=0)
+        num_unique = len(unique_rows)
+        if best_k > num_unique:
+            best_k = num_unique -2
+
+        print(f"Unique: {num_unique} > Chosen k {best_k}")
+
         # Clustering the responses using K_Means and extracting top keywords
-        labels, cluster_keywords = cluster_responses(q, n_clusters=5, top_n=3)
+        labels, cluster_keywords = cluster_responses(q, n_clusters=best_k, top_n=3)
         q.cluster_labels = labels
         q.cluster_names = cluster_keywords
 

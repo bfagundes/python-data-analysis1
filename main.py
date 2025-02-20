@@ -57,7 +57,6 @@ def main():
         # Check the second header row (the "flag")
         flag = survey_data.columns[column_index][1]
 
-        
         if flag == "ignore":
             continue
         elif flag == "multi_choice":

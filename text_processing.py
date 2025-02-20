@@ -1,7 +1,10 @@
 import string, spacy
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 
 # Load the Spanish language model at module level
 nlp = spacy.load("es_core_news_sm")
@@ -83,7 +86,12 @@ def vectorize_text(texts):
             - The fitted TfidfVectorizer instance.
             - The resulting TF-IDF matrix (sparse) where each row corresponds to a document and each column corresponds to a term.
     """
-    vectorizer = TfidfVectorizer()
+    vectorizer = TfidfVectorizer(
+        sublinear_tf=True,
+        #ngram_range=(1,2),
+        min_df=0.05, # Ignore terms that appears in less than this % of the documents
+        max_df=0.8 # Ignore terms that appears in more than this % of the documents
+    )
     tfidf_matrix = vectorizer.fit_transform(texts)
     return vectorizer, tfidf_matrix
 
@@ -102,6 +110,50 @@ def extract_keywords_from_centroid(cluster_center, feature_names, top_n=3):
     """
     top_indices = cluster_center.argsort()[::-1][:top_n]
     return [feature_names[i] for i in top_indices]
+
+def find_optimal_k_elbow(X, k_min=2, k_max=10, plot=True):
+    inertias = []
+    K_values = range(k_min, k_max + 1)
+
+    for k in K_values:
+        kmeans = KMeans(n_clusters=k, init='k-means++', random_state=42)
+        kmeans.fit(X)
+        inertias.append(kmeans.inertia_)
+
+    if plot:
+        plt.figure()
+        plt.plot(K_values, inertias, 'bx-')
+        plt.xlabel('k')
+        plt.ylabel('Inertia')
+        plt.title('Elbow Method')
+        #plt.show()
+
+    # This is just a placeholder: in practice, you'd visually inspect
+    # the plot or implement logic to detect the "elbow."
+    best_k = k_max  
+    return best_k
+
+def find_optimal_k_silhouette(X, k_min=2, k_max=10, plot=True):
+    silhouette_scores = []
+    K_values = range(k_min, k_max + 1)
+
+    for k in K_values:
+        kmeans = KMeans(n_clusters=k, init='k-means++', random_state=42)
+        labels = kmeans.fit_predict(X)
+        score = silhouette_score(X, labels)
+        silhouette_scores.append(score)
+
+    if plot:
+        plt.figure()
+        plt.plot(K_values, silhouette_scores, 'bx-')
+        plt.xlabel('k')
+        plt.ylabel('Silhouette Score')
+        plt.title('Silhouette Method')
+        #plt.show()
+
+    # Pick k that yields the highest silhouette score
+    best_k = K_values[silhouette_scores.index(max(silhouette_scores))]
+    return best_k
 
 def cluster_responses(question, n_clusters=5, top_n=3):
     """
@@ -144,12 +196,13 @@ def cluster_responses(question, n_clusters=5, top_n=3):
         )
         cluster_keywords.append(top_keywords)
 
-    # Print the results
-    print(f"\n--- Clustering results for question: '{question.question}' ---")
-    for cluster_id in range(n_clusters):
-        print(f"Cluster {cluster_id} (keywords = {', '.join(cluster_keywords[cluster_id])}):")
-        doc_indices = np.where(labels == cluster_id)[0]
-        for idx in doc_indices:
-            print(f"  - {question.cleaned_responses[idx]}")
+    with open('files/log.txt', mode='a') as f:
+        # Print the results
+        print(f"\n--- Clustering results for question: '{question.question}' ---", file=f)
+        for cluster_id in range(n_clusters):
+            print(f"Cluster {cluster_id} (keywords = {', '.join(cluster_keywords[cluster_id])}):", file=f)
+            doc_indices = np.where(labels == cluster_id)[0]
+            for idx in doc_indices:
+                print(f"  - {question.cleaned_responses[idx]}", file=f)
 
     return labels, cluster_keywords
