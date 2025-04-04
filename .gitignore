@@ -181,6 +181,8 @@ outline.txt
 *.xls
 *.xlsx
 *.docx
+*.pptx
 config.py
 specs.md
 plan.md
+Files/images/
