@@ -2,6 +2,7 @@ import os
 import re
 import pandas as pd
 import matplotlib.pyplot as plt
+import textwrap
 
 # =============== Settings ===============
 INPUT_XLSX  = "./files/2025-09-22.xlsx"   # <- change to your file
@@ -99,6 +100,18 @@ def save_pie_jpg(values_pct: pd.Series, outfile: str):
     plt.savefig(outfile, format="jpg", dpi=200, bbox_inches="tight")
     plt.close()
 
+def wrap_labels(labels, wrap_width=50, max_chars=150):
+    wrapped = []
+    for label in labels:
+        
+        # Truncate if label exceeds max_chars
+        if len(label) > max_chars:
+            label = label[:max_chars].rstrip() + "..."
+        
+        # Wrap the label text
+        wrapped.append('\n'.join(textwrap.wrap(label, wrap_width)))
+    return wrapped
+
 def save_bar_jpg(values_pct: pd.Series, outfile: str):
     """Horizontal bar chart, no title; 'Outros' rendered at the bottom; minimal frame."""
     if len(values_pct) == 0:
@@ -113,13 +126,13 @@ def save_bar_jpg(values_pct: pd.Series, outfile: str):
     labels = list(values_pct.index)
     vals   = list(values_pct.values)
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(12, 8))
     ax = plt.gca()
     bars = ax.barh(range(len(vals)), vals, color=BAR_COLOR)
 
     ax.set_yticks(range(len(vals)))
-    ax.set_yticklabels(labels)
-    ax.set_xlabel("Percent (%)")
+    ax.set_yticklabels(wrap_labels(labels), fontsize=10)
+    ax.set_xlabel("Porcentagem (%)")
 
     # Remove top/right/left borders
     for spine in ["top", "right", "left"]:
@@ -131,8 +144,13 @@ def save_bar_jpg(values_pct: pd.Series, outfile: str):
                 rect.get_y() + rect.get_height()/2,
                 f"{v:.1f}%", va="center", fontsize=9)
 
-    plt.tight_layout()
-    plt.savefig(outfile, format="jpg", dpi=200, bbox_inches="tight")
+    #plt.tight_layout()
+    # left=0.3: Sets the left margin to 50% of the figure width. This gives more space for long y-axis labels.
+    # right=0.95: Sets the right margin to 95% of the figure width, leaving a small space on the right.
+    # top=0.95: Sets the top margin to 95% of the figure height.
+    # bottom=0.05: Sets the bottom margin to 10% of the figure height.
+    plt.subplots_adjust(left=0.35, right=0.95, top=0.95, bottom=0.1)
+    plt.savefig(outfile, format="jpg", dpi=200)
     plt.close()
 
 def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_label: str,
