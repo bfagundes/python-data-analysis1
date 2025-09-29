@@ -88,16 +88,31 @@ def to_percentages(counts: pd.Series) -> pd.Series:
     return (counts / total * 100).round(2).sort_values(ascending=False)
 
 def save_pie_jpg(values_pct: pd.Series, outfile: str):
-    """Pie with fixed colors (≤4 categories), no title."""
+    """Pie with fixed colors (up to 4 categories), no title."""
     if len(values_pct) == 0:
         return
+    
     fracs = (values_pct / 100.0).values
     labels = [f"{idx} ({val:.1f}%)" for idx, val in values_pct.items()]
     colors = PIE_COLORS[:len(values_pct)]
-    plt.figure(figsize=(7, 7))
-    plt.pie(fracs, labels=labels, startangle=90, colors=colors)
-    plt.axis('equal')
-    plt.savefig(outfile, format="jpg", dpi=200, bbox_inches="tight")
+
+    # Fixed figure size for consistent width and height
+    fig, ax = plt.subplots(figsize=(9,9))
+
+    # Draw pie chart with label formatting
+    wedges, texts = ax.pie(
+        fracs,
+        labels=labels,
+        startangle=90,
+        colors=colors,
+        textprops={'fontsize': 12},
+        wedgeprops={'linewidth': 1, 'edgecolor': 'white'}
+    )
+
+    # Ensure pie is centered
+    ax.axis('equal')
+    plt.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.15)
+    plt.savefig(outfile, format="jpg", dpi=200)
     plt.close()
 
 def wrap_labels(labels, wrap_width=50, max_chars=150):
