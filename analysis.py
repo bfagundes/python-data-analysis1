@@ -9,7 +9,6 @@ INPUT_XLSX  = "./files/2025-09-22.xlsx"   # <- change to your file
 OUTPUT_XLSX         = "analysis.xlsx"
 CHARTS_DIR          = "charts"
 CONTROL_SHEET_NAME  = "respostas_validas"  # row 1 controls; row 2 headers
-GROUP_COL_INDEX     = 3                    # Column D (0-based index)
 MULTIPLE_SEPARATOR  = ";"
 TOP_N               = 10
 
@@ -275,11 +274,16 @@ for i, col_name in enumerate(control_headers):
 # Full data with real headers (row 2)
 df_full = pd.read_excel(INPUT_XLSX, sheet_name=CONTROL_SHEET_NAME, header=1)
 
-# =============== Build output (Overall 'geral' + Per-Group by column D) ===============
+# =============== Configurable output mode ===============
+# Default: only geral (overall). 
+# If you set GROUP_BY_COL_INDEX = 3 (or any valid index), it will also create per-group outputs.
+GROUP_BY_COL_INDEX = None   # <- set to None for geral only; or integer for per-group
+
+# =============== Build output (Overall 'geral' + optional Per-Group) ===============
 with pd.ExcelWriter(OUTPUT_XLSX, engine="xlsxwriter") as writer:
     workbook = writer.book
 
-    # Overall
+    # Always produce geral
     summarize_df_to_excel_and_charts(
         df=df_full,
         writer=writer,
@@ -288,30 +292,33 @@ with pd.ExcelWriter(OUTPUT_XLSX, engine="xlsxwriter") as writer:
         control_map=control_map
     )
 
-    # Per group: use column D
-    if GROUP_COL_INDEX >= len(df_full.columns):
-        raise IndexError(f"GROUP_COL_INDEX {GROUP_COL_INDEX} out of range for sheet '{CONTROL_SHEET_NAME}'")
+    # Only produce per-group if GROUP_BY_COL_INDEX is set
+    if GROUP_BY_COL_INDEX is not None:
+        if GROUP_BY_COL_INDEX >= len(df_full.columns):
+            raise IndexError(
+                f"GROUP_BY_COL_INDEX {GROUP_BY_COL_INDEX} out of range for sheet '{CONTROL_SHEET_NAME}'"
+            )
 
-    group_col_name = df_full.columns[GROUP_COL_INDEX]
+        group_col_name = df_full.columns[GROUP_BY_COL_INDEX]
 
-    # Drop NA/blank groups
-    groups_df = df_full.copy()
-    if groups_df[group_col_name].dtype == object:
-        groups_df[group_col_name] = groups_df[group_col_name].astype(str).str.strip()
-    groups_df = groups_df[groups_df[group_col_name].notna()]
-    groups_df = groups_df[groups_df[group_col_name] != ""]
+        # Drop NA/blank groups
+        groups_df = df_full.copy()
+        if groups_df[group_col_name].dtype == object:
+            groups_df[group_col_name] = groups_df[group_col_name].astype(str).str.strip()
+        groups_df = groups_df[groups_df[group_col_name].notna()]
+        groups_df = groups_df[groups_df[group_col_name] != ""]
 
-    unique_groups = groups_df[group_col_name].unique().tolist()
+        unique_groups = groups_df[group_col_name].unique().tolist()
 
-    for g in unique_groups:
-        df_g = groups_df[groups_df[group_col_name] == g]
-        group_label = str(g).strip() or "Unknown"  # sheet + filename base
-        summarize_df_to_excel_and_charts(
-            df=df_g,
-            writer=writer,
-            workbook=workbook,
-            sheet_label=group_label,
-            control_map=control_map
-        )
+        for g in unique_groups:
+            df_g = groups_df[groups_df[group_col_name] == g]
+            group_label = str(g).strip() or "Unknown"  # sheet + filename base
+            summarize_df_to_excel_and_charts(
+                df=df_g,
+                writer=writer,
+                workbook=workbook,
+                sheet_label=group_label,
+                control_map=control_map
+            )
 
 print(f"Done! Saved Excel to {OUTPUT_XLSX} and charts to '{CHARTS_DIR}/'.")
