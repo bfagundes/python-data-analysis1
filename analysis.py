@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import textwrap
 
 # =============== Settings ===============
-INPUT_XLSX  = "./files/2025-09-22.xlsx"   # <- change to your file
+INPUT_XLSX  = "./files/2025-09-30-uece.xlsx"   # <- change to your file
 OUTPUT_XLSX         = "analysis.xlsx"
 CHARTS_DIR          = "charts"
 CONTROL_SHEET_NAME  = "respostas_validas"  # row 1 controls; row 2 headers
