@@ -104,19 +104,20 @@ def save_pie_jpg(values_pct: pd.Series, outfile: str):
         labels=labels,
         startangle=90,
         colors=colors,
-        textprops={'fontsize': 12},
+        textprops={'fontsize': 10},
         wedgeprops={'linewidth': 1, 'edgecolor': 'white'}
     )
 
     # Ensure pie is centered
     ax.axis('equal')
-    plt.subplots_adjust(left=0.15, right=0.85, top=0.85, bottom=0.15)
+    plt.subplots_adjust(left=0.20, right=0.80, top=0.80, bottom=0.20)
     plt.savefig(outfile, format="jpg", dpi=200)
     plt.close()
 
 def wrap_labels(labels, wrap_width=50, max_chars=150):
     wrapped = []
     for label in labels:
+        label = str(label)  # ensure string
         
         # Truncate if label exceeds max_chars
         if len(label) > max_chars:
