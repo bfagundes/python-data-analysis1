@@ -183,7 +183,6 @@ outline.txt
 *.docx
 *.pptx
 *.zip
-config.py
 specs.md
 plan.md
 Files/images/

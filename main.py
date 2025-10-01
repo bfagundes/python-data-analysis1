@@ -1,74 +1,90 @@
-import csv
+# This is the main file that runs everything. It reads a spreadsheet, looks at answers,
+# makes pretty charts, and saves everything in a new Excel file.
+
+import os  
 import pandas as pd
-import config
+from config import INPUT_XLSX, OUTPUT_XLSX, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX
+from config import QTYPE_CLOSED, GENERAL_LABEL
+from summarizer import summarize_df_to_excel_and_charts
 
-from question_handlers import (
-    handle_question_multi_choice,
-    handle_question_default,
-    handle_open_question
-)
+# Make a folder called "charts" to save our pictures (if it doesn't exist yet)
+os.makedirs("charts", exist_ok=True)
 
-# ---- Constants / Config ----
-INPUT_FILE = 'files/input.csv'
-OUTPUT_FILE = 'files/output.csv'
-MAX_ANSWERS_PER_QUESTION = 10
-MAX_ANSWERS_SPILL_LABEL = "Otros"
+# Open the Excel file that has all the answers
+xls = pd.ExcelFile(INPUT_XLSX)
 
-def write_csv(question_list):
-    """
-    Writes the processed data into a CSV file.
+# If the sheet with answers isn't there, stop and shout!
+if CONTROL_SHEET_NAME not in xls.sheet_names:
+    raise ValueError(f"Sheet '{CONTROL_SHEET_NAME}' not found in workbook.")
 
-    Args:
-        question_list (list): A list of Question objects that hold the processed data.
-    """
-    with open(OUTPUT_FILE, mode='w', encoding='ansi', errors='ignore', newline='') as output_csv_file:
-        output_writer = csv.writer(output_csv_file, delimiter=";", quotechar='"', quoting=csv.QUOTE_MINIMAL)
+# Read the first row (row 1) to see what kind of question each column is
+ctrl_row = pd.read_excel(INPUT_XLSX, sheet_name=CONTROL_SHEET_NAME, header=None, nrows=1)
+
+# Read the second row (row 2) to get the column names
+headers_df = pd.read_excel(INPUT_XLSX, sheet_name=CONTROL_SHEET_NAME, header=1, nrows=0)
+control_headers = list(headers_df.columns)
+
+# Make a map that says: "This column is this kind of question"
+control_map = {}
+for i, col_name in enumerate(control_headers):
+    
+    # Get the keyword from the control row (like FECHADA or MULTIPLA)
+    kw = ctrl_row.iloc[0, i] if i < ctrl_row.shape[1] else None
+    
+    # If it's empty, we say it's a closed question (FECHADA)
+    if pd.isna(kw):
+        kw = QTYPE_CLOSED
+    
+    # Save the keyword in our map
+    control_map[col_name] = str(kw).strip().upper()
+
+# Now read all the real answers from the sheet (starting from row 2)
+df_full = pd.read_excel(INPUT_XLSX, sheet_name=CONTROL_SHEET_NAME, header=1)
+
+# We open a new Excel file to write our results
+with pd.ExcelWriter(OUTPUT_XLSX, engine="xlsxwriter") as writer:
+    workbook = writer.book
+
+    # First, we make a summary for everyone together (called "geral")
+    summarize_df_to_excel_and_charts(
+        df=df_full,
+        writer=writer,
+        workbook=workbook,
+        sheet_label=GENERAL_LABEL,
+        control_map=control_map
+    )
+
+    # If we want to split by groups (like schools or cities), we do that here
+    if GROUP_BY_COL_INDEX is not None:
         
-        # Iterate over each processed question object
-        for question in question_list:
-            # Write the question text
-            output_writer.writerow([question.question])
+        # Make sure the group column index is not too big
+        if GROUP_BY_COL_INDEX >= len(df_full.columns):
+            raise IndexError(f"GROUP_BY_COL_INDEX {GROUP_BY_COL_INDEX} out of range for sheet '{CONTROL_SHEET_NAME}'")
 
-            # Get a dictionary with the answers to write
-            answer_dict = question.get_answers(MAX_ANSWERS_PER_QUESTION, MAX_ANSWERS_SPILL_LABEL)
-            
-            # Write each answer, normalized freq, and absolute count
-            for answer, answers_normalized in answer_dict.items():
-                answers_count = int(answers_normalized * question.num_answers)
-                output_writer.writerow([answer, answers_normalized, answers_count])
+        # Get the name of the column we want to group by
+        group_col_name = df_full.columns[GROUP_BY_COL_INDEX]
 
-def main():
-    # Load CSV with a multi-line header (first line = column title, second line = flag)
-    survey_data = pd.read_csv(INPUT_FILE, sep=";", header=[0, 1])
+        # Clean up the group names (remove spaces and empty ones)
+        groups_df = df_full.copy()
+        if groups_df[group_col_name].dtype == object:
+            groups_df[group_col_name] = groups_df[group_col_name].astype(str).str.strip()
+        groups_df = groups_df[groups_df[group_col_name].notna()]
+        groups_df = groups_df[groups_df[group_col_name] != ""]
 
-    # Retriving the total columns and rows
-    total_columns = len(survey_data.columns)
-    total_rows = len(survey_data.index)
+        # Get a list of all the different groups
+        unique_groups = groups_df[group_col_name].unique().tolist()
 
-    # A list to store processed Question objects
-    question_list = []  
+        # For each group, make a separate summary and chart
+        for g in unique_groups:
+            df_g = groups_df[groups_df[group_col_name] == g]
+            group_label = str(g).strip() or "Unknown"
+            summarize_df_to_excel_and_charts(
+                df=df_g,
+                writer=writer,
+                workbook=workbook,
+                sheet_label=group_label,
+                control_map=control_map
+            )
 
-    print(f"The file has {total_rows} rows and {total_columns} columns.")
-    print("Processing ...")
-
-    # Loop through each column
-    for column_index in range(total_columns):
-        
-        # Check the second header row (the "flag")
-        flag = survey_data.columns[column_index][1]
-
-        if flag == "ignore":
-            continue
-        elif flag == "multi_choice":
-            handle_question_multi_choice(survey_data, column_index, question_list)
-        elif flag == "open":
-            handle_open_question(survey_data, column_index, question_list)
-        else:
-            handle_question_default(survey_data, column_index, question_list)
-
-    # Once all columns are processed, write to CSV
-    write_csv(question_list)
-    print("Process completed successfully.")
-
-if __name__ == "__main__":
-    main()
+# All done! Tell the user where we saved the results
+print(f"Done! Saved Excel to {OUTPUT_XLSX} and charts to 'charts/'.")
