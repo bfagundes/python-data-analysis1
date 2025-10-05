@@ -1,7 +1,7 @@
 # This file is like our instruction sheet.
 
 # This is the path to the Excel file we want to read.
-INPUT_XLSX = "./files/2025-09-30-uece.xlsx"
+INPUT_XLSX = "./files/[UNOESC] Questionários para Professores e Pesquisadores(1-120).xlsx"
 
 # This is where we want to save our new Excel file with the results.
 OUTPUT_XLSX = "./charts/analysis.xlsx"
@@ -20,6 +20,7 @@ TOP_N = 10
 
 # If we want to split results by groups (like schools), we put the column number here.
 # If we don’t want to split, we leave it as None.
+# e.g Column A = 0, B = 1, etc.
 GROUP_BY_COL_INDEX = None
 
 # These are the colors we use for pie charts. In order, descending.
