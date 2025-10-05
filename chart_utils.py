@@ -13,8 +13,14 @@ def save_pie_jpg(values_pct: pd.Series, outfile: str):
     # Turn percentages into slices of pie
     fracs = (values_pct / 100.0).values
 
+    # Wrap labels so they don't overflow
+    #raw_labels = [f"{idx} ({val:.1f}%)"]    
+
     # Make labels like "Apple (25.0%)"
-    labels = [f"{idx} ({val:.1f}%)" for idx, val in values_pct.items()]
+    # Using warp_labels to ensure they don't overflow outside the chart area
+    raw_labels = [f"{idx} ({val:.1f}%)" for idx, val in values_pct.items()]
+    labels = wrap_labels(raw_labels, wrap_width=30, max_chars=60)
+    #labels = [f"{idx} ({val:.1f}%)" for idx, val in values_pct.items()]
 
     # Pick colors for each slice
     colors = PIE_COLORS[:len(values_pct)]
