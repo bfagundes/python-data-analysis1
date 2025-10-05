@@ -1,3 +1,84 @@
+CREATE_REPORT = """
+Você é um analista de dados sênior, especialista em internacionalização do ensino superior.  
+Sua tarefa é elaborar um roteiro de diagnóstico institucional para apoiar a inscrição de uma rede universitária no programa CAPES-Global.  
+
+Regras:  
+- O roteiro deve ter uma linguagem formal e estruturada, como um relatório consultivo.  
+- Estruture o documento em seções hierárquicas (Introdução, Metodologia, Diagnóstico, Resultados, Análises por tema, Conclusão, Referências).  
+- Para cada seção, indique claramente quais perguntas do questionário devem ser contempladas (cite a letra da coluna e a pergunta).  
+- Inclua espaços para inserção futura de gráficos e análises estatísticas.  
+- Não responda às perguntas nem insira dados — apenas construa a estrutura detalhada do relatório, de forma lógica e organizada.  
+"""
+
+LLM_OUTPUT_SIMPLE = """
+# Roteiro de Diagnóstico Institucional para Inscrição no Programa CAPES-Global
+
+## Introdução
+- **Objetivo do Diagnóstico**: Delimitar a importância da internacionalização no contexto das Instituições de Ensino Superior (IES) e apresentar o propósito do diagnóstico.
+- **Contextualização**: A relevância da internacionalização e a importância do programa CAPES-Global para a melhoria da qualidade do ensino superior no Brasil.
+- **Perguntas a serem contempladas**:
+- A — Nome completo e sigla da IES
+- B — Segmento da IES
+- C — Tipo da IES
+- D — Cidade em que a sede da IES está localizada
+
+## Metodologia
+- **Tipo de Coleta de Dados**: Descrever a abordagem utilizada para a coleta de dados (questionário, entrevistas, etc.).
+- **População e Amostra**: Definir a população alvo e a amostra selecionada para o diagnóstico.
+- **Ferramentas de Análise**: Indicar as ferramentas estatísticas e de análise que serão utilizadas.
+- **Perguntas a serem contempladas**:
+- F — Oferece cursos
+- G — Número total de alunos matriculados (2024)
+- H — Número de Professores
+- I — Número de Técnicos Administrativos
+
+## Diagnóstico
+- **Análise da Internacionalização**: Avaliar a situação atual da internacionalização na IES.
+- **Participação em Redes e Consórcios**: Identificar redes e consórcios internacionais em que a IES está inserida.
+- **Estratégia de Internacionalização**: Examinar como a internacionalização é abordada no planejamento institucional.
+- **Obstáculos à Internacionalização**: Identificar fatores que dificultam a internacionalização.
+- **Perguntas a serem contempladas**:
+- J — Possui alguma acreditação internacional
+- K — Qual/Quais?
+- L — Está posicionada em algum ranking internacional?
+- M — Qual/Quais?
+- N — Participa de alguma rede internacional
+- O — Qual/Quais?
+- P — Faz ou fez parte de algum consórcio internacional
+- Q — Qual/Quais?
+- R — A internacionalização está incluída no planejamento da IES?
+- S — Quem é responsável pela internacionalização na instituição?
+- T — Como você avalia o processo de internacionalização da sua instituição?
+- AO — Indique quais dos seguintes fatores são obstáculos externos à internacionalização da sua instituição
+- AP — Indique quais dos seguintes fatores são obstáculos internos à internacionalização de sua instituição.
+
+## Resultados
+- **Análise Estatística**: Apresentar gráficos e tabelas que sintetizem os dados coletados.
+- **Atividades de Internacionalização**: Avaliar a frequência e a diversidade das atividades de internacionalização oferecidas.
+- **Mobilidade Internacional**: Analisar os dados relacionados à mobilidade de alunos, professores e técnicos administrativos.
+- **Projetos e Acordos de Cooperação**: Avaliar a quantidade e a qualidade dos acordos de cooperação internacionais.
+- **Orçamento e Financiamento**: Analisar os dados financeiros relacionados à internacionalização.
+- **Perguntas a serem contempladas**:
+- U — Com que frequência são ofertadas as atividades de internacionalização em sua instituição? (todas as subcategorias listadas de V a EJ)
+- AQ — Quantos acordos de cooperação sua instituição tem com parceiros internacionais?
+- AR — Quantos acordos de cooperação internacional assinados nos últimos 8 anos resultaram em projetos de pesquisa, tecnologia, inovação, projetos de extensão e publicações acadêmicas?
+- BG — Existe um orçamento institucional específico para internacionalização em sua instituição?
+- BH — Qual a proporção do orçamento dedicado à internacionalização em relação ao orçamento total da instituição?
+
+## Conclusão
+- **Síntese dos Resultados**: Resumir as principais descobertas do diagnóstico.
+- **Recomendações**: Propor ações e estratégias para melhorar a internacionalização da IES.
+- **Sugestões Futuras**: Indicar áreas que necessitam de mais pesquisa ou desenvolvimento.
+- **Perguntas a serem contempladas**:
+- EO — Você tem alguma sugestão ou recomendação para melhorar a internacionalização em sua instituição?
+
+## Referências
+- **Literatura e Documentos**: Listar as fontes consultadas para elaborar o diagnóstico.
+- **Documentos Institucionais**: Incluir referências a documentos internos que sustentem o diagnóstico.
+"""
+
+
+
 """
 Roteiro de diagnóstico de internacionalização:
 

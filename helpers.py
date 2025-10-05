@@ -1,6 +1,7 @@
 import re
 import textwrap
 import pandas as pd
+from config import INPUT_XLSX, CONTROL_SHEET_NAME
 
 # This function makes sure our Excel sheet names are clean and not too long
 def sanitize_sheet_name(name, existing):
@@ -54,3 +55,14 @@ def wrap_labels(labels, wrap_width=50, max_chars=150):
         # Break the label into lines so it fits nicely
         wrapped.append('\n'.join(textwrap.wrap(label, wrap_width)))
     return wrapped
+
+# This function returns the questions list and column ID
+def get_question_list():
+    headers_df = pd.read_excel(INPUT_XLSX, sheet_name=CONTROL_SHEET_NAME, header=1, nrows=0)
+    questions = list(headers_df.columns)
+
+    question_list = []
+    for idx, q in enumerate(questions):
+        col_letter = colnum_to_excel(idx)
+        question_list.append(f"{col_letter} — {q}")
+    return "\n".join(question_list)

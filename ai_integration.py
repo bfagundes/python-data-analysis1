@@ -1,4 +1,5 @@
 from openai_module import generate_response
+from helpers import get_question_list
 
 def ask_ai(prompt: str) -> str:
     """
@@ -9,4 +10,20 @@ def ask_ai(prompt: str) -> str:
     try:
         return generate_response(prompt)
     except Exception as e:
-        return "Failed to generate the response. Exception code: {e}"
+        return f"Failed to generate the response. Exception: {e}"
+    
+def get_report_building_prompt():
+    questions_text = get_question_list()
+    return f"""
+    Você é um analista de dados sênior, especialista em internacionalização do ensino superior.
+    Sua tarefa é elaborar um roteiro de diagnóstico institucional para apoiar a inscrição de uma rede universitária no programa CAPES-Global.
+
+    Aqui estão as perguntas do questionário e suas colunas:
+    {questions_text}
+
+    Regras:
+    - Estruture o documento em seções hierárquicas (Introdução, Metodologia, Diagnóstico, Resultados, Conclusão, Referências).
+    - Para cada seção, indique claramente quais perguntas devem ser contempladas (use a letra da coluna e o texto da pergunta).
+    - Inclua placeholders para gráficos e análises estatísticas.
+    - Não responda às perguntas nem insira dados — apenas construa a estrutura detalhada do relatório.
+    """

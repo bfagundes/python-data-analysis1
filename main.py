@@ -4,8 +4,7 @@
 import os  
 import shutil
 import pandas as pd
-from config import INPUT_XLSX, OUTPUT_XLSX, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX
-from config import QTYPE_CLOSED, GENERAL_LABEL
+from config import INPUT_XLSX, OUTPUT_XLSX, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX, QTYPE_CLOSED, GENERAL_LABEL, LLM_FEATURES_ON
 from summarizer import summarize_df_to_excel_and_charts
 
 # Make a folder called "charts" to save our pictures (if it doesn't exist yet)
@@ -112,3 +111,15 @@ shutil.make_archive(zip_path.replace(".zip", ""), 'zip', "charts")
 
 # Tell the user where we saved the zip file
 print(f"Done! Saved Excel to {OUTPUT_XLSX}, charts to 'charts/', and zip to {zip_path}")
+
+# Use LLM to generate a report based on the questions
+if LLM_FEATURES_ON:
+    try:
+        from generate_report import generate_diagnosis_report
+        generate_diagnosis_report()
+    
+    except Exception as e:
+        print(f"⚠️ Failed to generate report: {e}")
+
+else:
+    print("Skipping LLM report generation (RUN_REPORT_GENERATION=False).")
