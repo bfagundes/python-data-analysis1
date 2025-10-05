@@ -1,7 +1,7 @@
 # This file is like our instruction sheet.
 
 # This is the path to the Excel file we want to read.
-INPUT_XLSX = "./files/[UNOESC] Questionários para Professores e Pesquisadores(1-120).xlsx"
+INPUT_XLSX = "./files/[UNOESC] Questionário para Direção.xlsx"
 
 # This is where we want to save our new Excel file with the results.
 OUTPUT_XLSX = "./charts/analysis.xlsx"

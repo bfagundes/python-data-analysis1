@@ -9,6 +9,9 @@ from helpers import sanitize_sheet_name, sanitize_filename, colnum_to_excel
 from data_cleaning import clean_single, expand_multiple, cap_top_n_with_outros, to_percentages
 from chart_utils import save_pie_jpg, save_bar_jpg
 
+# Counter for how many charts we generated.
+_chart_counter = 1
+
 # This function makes one summary sheet and saves charts for each question
 def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_label: str, control_map: dict):
     
@@ -91,7 +94,10 @@ def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_l
         # Save a chart for this question
         col_letter = colnum_to_excel(df.columns.get_loc(col))  # Get column letter like A, B, C...
         base_name  = sanitize_filename(sheet_label, max_len=50)  # Clean up the sheet name for the file
-        chart_path = os.path.join(CHARTS_DIR, f"{base_name}_column{col_letter}.jpg")
+
+        global _chart_counter # Getting the chart counter
+        chart_path = os.path.join(CHARTS_DIR, f"{_chart_counter:03d}_{base_name}_column{col_letter}.jpg")
+        _chart_counter += 1
 
         # If there are 4 or fewer answers, make a pie chart
         if len(pct) <= 4:
