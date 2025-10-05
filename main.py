@@ -10,6 +10,15 @@ from summarizer import summarize_df_to_excel_and_charts
 # Make a folder called "charts" to save our pictures (if it doesn't exist yet)
 os.makedirs("charts", exist_ok=True)
 
+# Clean up any old charts before saving new ones
+for filename in os.listdir("charts"):
+    file_path = os.path.join("charts", filename)
+    try:
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.unlink(file_path) #Remove file or symlink
+    except Exception as e:
+        print(f"Failed to delete {file_path}. Reason: {e}")
+
 # Open the Excel file that has all the answers
 xls = pd.ExcelFile(INPUT_XLSX)
 
