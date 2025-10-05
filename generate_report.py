@@ -1,9 +1,10 @@
 import os, re
+import pandas as pd
 from docx import Document
 from docx.shared import Inches
 from ai_integration import ask_ai, get_report_building_prompt
-from config import INPUT_XLSX, CHARTS_DIR
-from llm_prompts import LLM_OUTPUT_SIMPLE
+from config import INPUT_XLSX, LLM_FEATURES_ON, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX, GENERAL_LABEL
+from llm_prompts import LLM_OUTPUT_SIMPLE, LLM_OUTPUT_BY_GROUPS
 
 # Parses the LLM output in Markdown into DOCX paraghraphs
 def add_markdown_paragraph(doc, text):
@@ -46,19 +47,43 @@ def insert_chart_for_column(doc, col_letter, charts_dir="charts"):
 
 # This function generates a .DOCX report by leveraging LLM
 def generate_diagnosis_report():
+    # Load Excel to detect grouping
+    df_full = pd.read_excel(INPUT_XLSX, sheet_name=CONTROL_SHEET_NAME, header=1)
+
+    # Get outline once
     prompt = get_report_building_prompt()
     print(f"LLM PROMPT:\n{prompt}\n")
 
-    # Comment for testing to not spend AI Tokens
-    #outline = ask_ai(prompt)
-    #print(f"LLM Output:\n{outline}")
-    outline = LLM_OUTPUT_SIMPLE
+    # Gets the output from LLM
+    if LLM_FEATURES_ON:
+        outline = ask_ai(prompt)
+        print(f"\n LLM Output:{outline}\n")
+    else:
+        print("LLM disabled, using offline output")
+        outline = LLM_OUTPUT_BY_GROUPS
 
+    # If we want to split by groups (like schools or cities), we do that here
+    if GROUP_BY_COL_INDEX is None:
+        # Single global report
+        build_report(outline, GENERAL_LABEL, charts_dir="charts")
+    
+    else:
+        # One report per group
+        group_col_name = df_full.columns[GROUP_BY_COL_INDEX]
+        groups_df = df_full[df_full[group_col_name].notna() & (df_full[group_col_name] != "")]
+        unique_groups = groups_df[group_col_name].unique().tolist()
+
+        for g in unique_groups:
+            group_label = str(g).strip() or "Unknown"
+            charts_dir = "charts"  # still flat, but filenames include group name prefix
+            build_report(outline, group_label, charts_dir)
+
+def build_report(outline, group_label, charts_dir="charts"):
     doc = Document()
-    doc.add_heading("Roteiro de Diagnóstico de Internacionalização", level=0)
+    doc.add_heading(f"Relatório — {group_label}", level=0)
 
     for line in outline.split("\n"):
-        if line.strip() == "":
+        if not line.strip():
             continue
 
         if line.startswith("# "):
@@ -79,13 +104,12 @@ def generate_diagnosis_report():
             col_match = re.match(r"[-•\s]*\*{0,2}([A-Z]{1,3})\*{0,2}\s*[:—\-–]", clean_line)
             if col_match:
                 col_letter = col_match.group(1)
-                inserted = insert_chart_for_column(doc, col_letter)
-                if not inserted:
-                    print(f"(No chart found for column {col_letter})")
+                insert_chart_for_column(doc, col_letter, charts_dir=charts_dir)
 
     # build the report path
     base_name = os.path.splitext(os.path.basename(INPUT_XLSX))[0]
-    report_path = os.path.join(os.path.dirname(INPUT_XLSX), f"{base_name}_report.docx")
+    safe_group = re.sub(r"[^\w\-]+", "_", group_label)
+    report_path = os.path.join(os.path.dirname(INPUT_XLSX), f"{base_name}_{safe_group}_report.docx")
 
     # remove existing file if present
     if os.path.exists(report_path):

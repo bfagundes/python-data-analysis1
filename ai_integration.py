@@ -24,6 +24,9 @@ def get_report_building_prompt():
     Regras:
     - Estruture o documento em seções hierárquicas (Introdução, Metodologia, Diagnóstico, Resultados, Conclusão, Referências).
     - Para cada seção, indique claramente quais perguntas devem ser contempladas (use a letra da coluna e o texto da pergunta).
+    - Sempre liste as perguntas no formato: "- [COLUNA] — [Texto da pergunta]"
+    - Exemplo: "- A — Nome completo e sigla da IES"
+    - Não use dois pontos, hífens simples ou qualquer outra marcação.
     - Inclua placeholders para gráficos e análises estatísticas.
     - Não responda às perguntas nem insira dados — apenas construa a estrutura detalhada do relatório.
     """
