@@ -30,3 +30,20 @@ def get_report_building_prompt():
     - Inclua placeholders para gráficos e análises estatísticas.
     - Não responda às perguntas nem insira dados — apenas construa a estrutura detalhada do relatório.
     """
+
+def get_section_analyzer_prompt(section_name: str, data: dict) -> str:
+    data_str = "\n".join([f"- {k}: {v:.1f}%" for k, v in data.items()])
+    
+    return f"""
+    Você é um analista de dados sênior, especialista em educação.
+    Sua tarefa é escrever a análise textual e interpretativa da seção "{section_name}" 
+    do relatório institucional, com base nos seguintes dados (em porcentagens):
+
+    {data_str}
+
+    Regras:
+    - O texto deve ser formal, analítico e corrido (sem bullet points).
+    - Comece direto, sem frases introdutórias como “os resultados mostram que...”.
+    - Conecte os dados a implicações institucionais, oportunidades e desafios.
+    - O texto deve ter entre 2 e 4 parágrafos.
+    """

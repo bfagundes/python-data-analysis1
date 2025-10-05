@@ -2,9 +2,10 @@ import os, re
 import pandas as pd
 from docx import Document
 from docx.shared import Inches
-from ai_integration import ask_ai, get_report_building_prompt
+from ai_integration import ask_ai, get_report_building_prompt, get_section_analyzer_prompt
 from config import INPUT_XLSX, LLM_FEATURES_ON, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX, GENERAL_LABEL
-from llm_prompts import LLM_OUTPUT_SIMPLE, LLM_OUTPUT_BY_GROUPS
+from llm_prompts import LLM_OUTPUT_SIMPLE, LLM_OUTPUT_BY_GROUPS, LLM_OUTPUT_SECTION_ANALYSIS
+from summarizer import chart_data_map
 
 # Parses the LLM output in Markdown into DOCX paraghraphs
 def add_markdown_paragraph(doc, text):
@@ -82,29 +83,63 @@ def build_report(outline, group_label, charts_dir="charts"):
     doc = Document()
     doc.add_heading(f"Relatório — {group_label}", level=0)
 
+    current_section = None
+    current_cols = []
+
     for line in outline.split("\n"):
         if not line.strip():
             continue
 
-        if line.startswith("# "):
-            doc.add_heading(line[2:], level=1)
+        clean_line = line.strip()
 
-        elif line.startswith("## "):
-            doc.add_heading(line[3:], level=2)
+        # --- Section headers
+        if clean_line.startswith("## "):
+            # Before starting a new section, flush previous one
+            if current_section and current_cols:
+                section_data = {c: chart_data_map.get(c, {}) for c in current_cols}
+            
+            if LLM_FEATURES_ON:
+                analysis_text = ask_ai(get_section_analyzer_prompt(current_section, section_data))
+            else:
+                analysis_text = "(Análise automática desativada nesta execução)"
+            doc.add_paragraph(analysis_text)
 
-        elif line.startswith("### "):
-            doc.add_heading(line[4:], level=3)
+            # Start new section
+            current_section = clean_line.replace("##", "").strip()
+            current_cols = []
+            doc.add_heading(current_section, level=2)
+            continue
+
+        elif clean_line.startswith("# "):
+            doc.add_heading(clean_line[2:], level=1)
+            continue
+
+        elif clean_line.startswith("### "):
+            doc.add_heading(clean_line[4:], level=3)
+            continue
 
         else:
             # Parses the LLM Markdown output and inserts into the document
-            clean_line = line.strip()
             add_markdown_paragraph(doc, clean_line)
 
             # Matches the placeholder for charts - so we can include it into the document
             col_match = re.match(r"[-•\s]*\*{0,2}([A-Z]{1,3})\*{0,2}\s*[:—\-–]", clean_line)
             if col_match:
                 col_letter = col_match.group(1)
-                insert_chart_for_column(doc, col_letter, charts_dir=charts_dir)
+                if insert_chart_for_column(doc, col_letter, charts_dir):
+                    current_cols.append(col_letter)
+
+    # --- Flush last section
+    if current_section and current_cols:
+        section_data = {c: chart_data_map.get(c, {}) for c in current_cols}
+        
+        if LLM_FEATURES_ON:
+            analysis_text = ask_ai(get_section_analyzer_prompt(current_section, section_data))
+
+        else:
+            analysis_text = LLM_OUTPUT_SECTION_ANALYSIS
+            
+        doc.add_paragraph(analysis_text)
 
     # build the report path
     base_name = os.path.splitext(os.path.basename(INPUT_XLSX))[0]

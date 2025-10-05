@@ -12,6 +12,9 @@ from chart_utils import save_pie_jpg, save_bar_jpg
 # Counter for how many charts we generated.
 _chart_counter = 1
 
+# Dictionary to store chart data for later AI analysis
+chart_data_map = {}
+
 # This function makes one summary sheet and saves charts for each question
 def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_label: str, control_map: dict):
     
@@ -76,6 +79,10 @@ def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_l
 
         # Turn counts into percentages
         pct = to_percentages(counts_capped)
+
+        # Save chart data for later AI analysis
+        col_letter = colnum_to_excel(df.columns.get_loc(col))  # Get column letter like A, B, C...
+        chart_data_map[col_letter] = pct.to_dict()
 
         # Move "Outros" to the bottom of the list
         if OTHERS_LABEL in pct.index:

@@ -21,7 +21,7 @@ TOP_N = 10
 # If we want to split results by groups (like schools), we put the column number here.
 # If we don’t want to split, we leave it as None.
 # e.g Column A = 0, B = 1, etc.
-GROUP_BY_COL_INDEX = 0
+GROUP_BY_COL_INDEX = None
 
 # These are the colors we use for pie charts. In order, descending.
 PIE_COLORS = ["#1E325A", "#710101", "#051C48", "#141E34"]
@@ -40,4 +40,4 @@ OTHERS_LABEL = "Outros"
 GENERAL_LABEL = "Geral"
 
 # Flag to activate - or not - the LLM features
-LLM_FEATURES_ON = False 
+LLM_FEATURES_ON = False

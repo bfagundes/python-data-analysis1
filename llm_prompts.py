@@ -155,6 +155,10 @@ A conclusão deve resumir os principais achados do diagnóstico e sugerir próxi
 - BE — Sugestões
 """
 
+LLM_OUTPUT_SECTION_ANALYSIS = """
+"(Análise automática desativada nesta execução)"
+"""
+
 """
 Roteiro de diagnóstico de internacionalização:
 
