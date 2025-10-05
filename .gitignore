@@ -183,7 +183,6 @@ outline.txt
 *.docx
 *.pptx
 *.zip
-specs.md
-plan.md
+config_api.py
 Files/images/
 charts/*.jpg
