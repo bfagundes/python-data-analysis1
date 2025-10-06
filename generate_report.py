@@ -3,7 +3,7 @@ import pandas as pd
 from docx import Document
 from docx.shared import Inches
 from ai_integration import ask_ai, get_report_building_prompt, get_section_analyzer_prompt
-from config import INPUT_XLSX, LLM_FEATURES_ON, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX, GENERAL_LABEL
+from config import INPUT_XLSX, LLM_FEATURES_ON, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX, GENERAL_LABEL, OUTPUT_DIR
 from llm_prompts import LLM_OUTPUT_SIMPLE, LLM_OUTPUT_BY_GROUPS, LLM_OUTPUT_SECTION_ANALYSIS
 from summarizer import chart_data_map
 
@@ -38,10 +38,10 @@ def add_markdown_paragraph(doc, text):
             run.text = token
 
 # This function inserts the chart for a given column into the document
-def insert_chart_for_column(doc, col_letter, charts_dir="charts"):
-    for fname in os.listdir(charts_dir):
+def insert_chart_for_column(doc, col_letter):
+    for fname in os.listdir(OUTPUT_DIR):
         if f"_column{col_letter}.jpg" in fname:
-            chart_path = os.path.join(charts_dir, fname)
+            chart_path = os.path.join(OUTPUT_DIR, fname)
             doc.add_picture(chart_path, width=Inches(5.5))
             return True
     return False
@@ -66,9 +66,12 @@ def generate_diagnosis_report():
     # If we want to split by groups (like schools or cities), we do that here
     if GROUP_BY_COL_INDEX is None:
         # Single global report
-        build_report(outline, GENERAL_LABEL, charts_dir="charts")
+        build_report(outline, GENERAL_LABEL)
     
     else:
+        # Always create the general report first
+        build_report(outline, GENERAL_LABEL)
+
         # One report per group
         group_col_name = df_full.columns[GROUP_BY_COL_INDEX]
         groups_df = df_full[df_full[group_col_name].notna() & (df_full[group_col_name] != "")]
@@ -76,10 +79,9 @@ def generate_diagnosis_report():
 
         for g in unique_groups:
             group_label = str(g).strip() or "Unknown"
-            charts_dir = "charts"  # still flat, but filenames include group name prefix
-            build_report(outline, group_label, charts_dir)
+            build_report(outline, group_label)
 
-def build_report(outline, group_label, charts_dir="charts"):
+def build_report(outline, group_label):
     doc = Document()
     doc.add_heading(f"Relatório — {group_label}", level=0)
 
@@ -101,7 +103,7 @@ def build_report(outline, group_label, charts_dir="charts"):
             if LLM_FEATURES_ON:
                 analysis_text = ask_ai(get_section_analyzer_prompt(current_section, section_data))
             else:
-                analysis_text = "(Análise automática desativada nesta execução)"
+                analysis_text = LLM_OUTPUT_SECTION_ANALYSIS
             doc.add_paragraph(analysis_text)
 
             # Start new section
@@ -126,7 +128,7 @@ def build_report(outline, group_label, charts_dir="charts"):
             col_match = re.match(r"[-•\s]*\*{0,2}([A-Z]{1,3})\*{0,2}\s*[:—\-–]", clean_line)
             if col_match:
                 col_letter = col_match.group(1)
-                if insert_chart_for_column(doc, col_letter, charts_dir):
+                if insert_chart_for_column(doc, col_letter):
                     current_cols.append(col_letter)
 
     # --- Flush last section
@@ -144,7 +146,9 @@ def build_report(outline, group_label, charts_dir="charts"):
     # build the report path
     base_name = os.path.splitext(os.path.basename(INPUT_XLSX))[0]
     safe_group = re.sub(r"[^\w\-]+", "_", group_label)
-    report_path = os.path.join(os.path.dirname(INPUT_XLSX), f"{base_name}_{safe_group}_report.docx")
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)  # ensure folder exists
+    report_path = os.path.join(OUTPUT_DIR, f"{base_name}_{safe_group}_report.docx")
 
     # remove existing file if present
     if os.path.exists(report_path):

@@ -4,10 +4,11 @@
 INPUT_XLSX = "./files/[UNOESC] Questionários para Professores e Pesquisadores(1-120).xlsx"
 
 # This is where we want to save our new Excel file with the results.
-OUTPUT_XLSX = "./charts/analysis.xlsx"
+OUTPUT_XLSX = "./output/analysis.xlsx"
 
 # This is the folder where we’ll save all the pretty chart pictures.
-CHARTS_DIR = "charts"
+# We'll also save the reports and other files we generated throughout the execution.
+OUTPUT_DIR = "output"
 
 # This is the name of the sheet inside the Excel file that has the answers.
 CONTROL_SHEET_NAME = "respostas_validas"

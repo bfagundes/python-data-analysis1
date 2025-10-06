@@ -185,4 +185,4 @@ outline.txt
 *.zip
 config_api.py
 Files/images/
-charts/*.jpg
+output/

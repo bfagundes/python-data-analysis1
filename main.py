@@ -4,15 +4,15 @@
 import os  
 import shutil
 import pandas as pd
-from config import INPUT_XLSX, OUTPUT_XLSX, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX, QTYPE_CLOSED, GENERAL_LABEL, LLM_FEATURES_ON
+from config import INPUT_XLSX, OUTPUT_XLSX, CONTROL_SHEET_NAME, GROUP_BY_COL_INDEX, QTYPE_CLOSED, GENERAL_LABEL, LLM_FEATURES_ON, OUTPUT_DIR
 from summarizer import summarize_df_to_excel_and_charts
 
 # Make a folder called "charts" to save our pictures (if it doesn't exist yet)
-os.makedirs("charts", exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Clean up any old charts before saving new ones
-for filename in os.listdir("charts"):
-    file_path = os.path.join("charts", filename)
+for filename in os.listdir(OUTPUT_DIR):
+    file_path = os.path.join(OUTPUT_DIR, filename)
     try:
         if os.path.isfile(file_path) or os.path.islink(file_path):
             os.unlink(file_path) #Remove file or symlink
@@ -95,9 +95,6 @@ with pd.ExcelWriter(OUTPUT_XLSX, engine="xlsxwriter") as writer:
                 control_map=control_map
             )
 
-# Tell the user where we saved the results
-#print(f"Saved Excel to {OUTPUT_XLSX} and charts to 'charts/'.")
-
 # Formatting the filename for the ZIP file
 base_name = os.path.splitext(os.path.basename(INPUT_XLSX))[0]
 zip_path = os.path.join(os.path.dirname(INPUT_XLSX), f"{base_name}.zip")
@@ -107,10 +104,10 @@ if os.path.exists(zip_path):
     os.remove(zip_path)
 
 # Create a ZIP file with all charts
-shutil.make_archive(zip_path.replace(".zip", ""), 'zip', "charts")
+shutil.make_archive(zip_path.replace(".zip", ""), 'zip', OUTPUT_DIR)
 
 # Tell the user where we saved the zip file
-print(f"Done! Saved Excel to {OUTPUT_XLSX}, charts to 'charts/', and zip to {zip_path}")
+print(f"Done! Saved Excel to {OUTPUT_XLSX}, charts to '{OUTPUT_DIR}/', and zip to {zip_path}")
 
 # Use LLM to generate a report based on the questions
 if LLM_FEATURES_ON:

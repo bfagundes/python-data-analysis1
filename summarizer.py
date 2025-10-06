@@ -3,7 +3,7 @@
 
 import os
 import pandas as pd
-from config import CHARTS_DIR, TOP_N, MULTIPLE_SEPARATOR
+from config import OUTPUT_DIR, TOP_N, MULTIPLE_SEPARATOR
 from config import QTYPE_CLOSED, QTYPE_MULTIPLE, QTYPE_OPEN, QTYPE_IGNORE, OTHERS_LABEL
 from helpers import sanitize_sheet_name, sanitize_filename, colnum_to_excel
 from data_cleaning import clean_single, expand_multiple, cap_top_n_with_outros, to_percentages
@@ -103,7 +103,7 @@ def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_l
         base_name  = sanitize_filename(sheet_label, max_len=50)  # Clean up the sheet name for the file
 
         global _chart_counter # Getting the chart counter
-        chart_path = os.path.join(CHARTS_DIR, f"{_chart_counter:03d}_{base_name}_column{col_letter}.jpg")
+        chart_path = os.path.join(OUTPUT_DIR, f"{_chart_counter:03d}_{base_name}_column{col_letter}.jpg")
         _chart_counter += 1
 
         # If there are 4 or fewer answers, make a pie chart
