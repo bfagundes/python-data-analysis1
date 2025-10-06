@@ -32,8 +32,17 @@ def get_report_building_prompt():
     """
 
 def get_section_analyzer_prompt(section_name: str, data: dict) -> str:
-    data_str = "\n".join([f"- {k}: {v:.1f}%" for k, v in data.items()])
-    
+    lines = []
+    for col, answers in data.items():
+        if isinstance(answers, dict):
+            for ans, pct in answers.items():
+                lines.append(f"- {col} | {ans}: {pct:.1f}%")
+        else:
+            # fallback if it's already numeric
+            lines.append(f"- {col}: {answers:.1f}%")
+
+    data_str = "\n".join(lines)
+
     return f"""
     Você é um analista de dados sênior, especialista em educação.
     Sua tarefa é escrever a análise textual e interpretativa da seção "{section_name}" 

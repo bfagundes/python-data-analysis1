@@ -12,7 +12,7 @@ def generate_response(prompt: str, model: str = "gpt-4o-mini") -> str:
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1000,
+        max_tokens=4000,
         temperature=0.7
     )
     return response.choices[0].message.content.strip()

@@ -106,6 +106,8 @@ def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_l
         chart_path = os.path.join(OUTPUT_DIR, f"{_chart_counter:03d}_{base_name}_column{col_letter}.jpg")
         _chart_counter += 1
 
+        print(f"Creating chart for column '{col}' in sheet '{sheet_label}'...")
+
         # If there are 4 or fewer answers, make a pie chart
         if len(pct) <= 4:
             save_pie_jpg(pct, chart_path)
@@ -117,3 +119,5 @@ def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_l
     # Make columns wide enough to read nicely
     ws.set_column(0, 0, 50)
     ws.set_column(1, 1, 12)
+
+    print(f"Finished charts for sheet '{sheet_label}'")

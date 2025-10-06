@@ -95,9 +95,22 @@ with pd.ExcelWriter(OUTPUT_XLSX, engine="xlsxwriter") as writer:
                 control_map=control_map
             )
 
+# Use LLM to generate a report based on the questions
+if LLM_FEATURES_ON:
+    try:
+        from generate_report import generate_diagnosis_report
+        generate_diagnosis_report()
+    
+    except Exception as e:
+        print(f"Failed to generate report: {e}")
+
+else:
+    print("Skipping LLM report generation (RUN_REPORT_GENERATION=False).")
+
 # Formatting the filename for the ZIP file
+print("Packaging charts and reports into ZIP...")
 base_name = os.path.splitext(os.path.basename(INPUT_XLSX))[0]
-zip_path = os.path.join(os.path.dirname(INPUT_XLSX), f"{base_name}.zip")
+zip_path = os.path.join(OUTPUT_DIR, f"{base_name}.zip")
 
 # Remove any existing zip file
 if os.path.exists(zip_path):
@@ -108,15 +121,3 @@ shutil.make_archive(zip_path.replace(".zip", ""), 'zip', OUTPUT_DIR)
 
 # Tell the user where we saved the zip file
 print(f"Done! Saved Excel to {OUTPUT_XLSX}, charts to '{OUTPUT_DIR}/', and zip to {zip_path}")
-
-# Use LLM to generate a report based on the questions
-if LLM_FEATURES_ON:
-    try:
-        from generate_report import generate_diagnosis_report
-        generate_diagnosis_report()
-    
-    except Exception as e:
-        print(f"⚠️ Failed to generate report: {e}")
-
-else:
-    print("Skipping LLM report generation (RUN_REPORT_GENERATION=False).")

@@ -53,12 +53,13 @@ def generate_diagnosis_report():
 
     # Get outline once
     prompt = get_report_building_prompt()
-    print(f"LLM PROMPT:\n{prompt}\n")
+    #print(f"LLM PROMPT:\n{prompt}\n")
 
     # Gets the output from LLM
     if LLM_FEATURES_ON:
+        print("Sending prompt to LLM for report outline...")
         outline = ask_ai(prompt)
-        print(f"\n LLM Output:{outline}\n")
+        #print(f"\n LLM Output:{outline}\n")
     else:
         print("LLM disabled, using offline output")
         outline = LLM_OUTPUT_BY_GROUPS
@@ -82,6 +83,8 @@ def generate_diagnosis_report():
             build_report(outline, group_label)
 
 def build_report(outline, group_label):
+    print("Creating report outline...")
+
     doc = Document()
     doc.add_heading(f"Relatório — {group_label}", level=0)
 
@@ -100,11 +103,14 @@ def build_report(outline, group_label):
             if current_section and current_cols:
                 section_data = {c: chart_data_map.get(c, {}) for c in current_cols}
             
-            if LLM_FEATURES_ON:
-                analysis_text = ask_ai(get_section_analyzer_prompt(current_section, section_data))
-            else:
-                analysis_text = LLM_OUTPUT_SECTION_ANALYSIS
-            doc.add_paragraph(analysis_text)
+                if LLM_FEATURES_ON:
+                    print(f"Analyzing section '{current_section}'...")
+                    analysis_text = ask_ai(get_section_analyzer_prompt(current_section, section_data))
+                else:
+                    print("LLM disabled, using offline output")
+                    analysis_text = LLM_OUTPUT_SECTION_ANALYSIS
+
+                doc.add_paragraph(analysis_text)
 
             # Start new section
             current_section = clean_line.replace("##", "").strip()
@@ -136,9 +142,11 @@ def build_report(outline, group_label):
         section_data = {c: chart_data_map.get(c, {}) for c in current_cols}
         
         if LLM_FEATURES_ON:
+            print(f"Analyzing section '{current_section}'...")
             analysis_text = ask_ai(get_section_analyzer_prompt(current_section, section_data))
 
         else:
+            print("LLM disabled, using offline output")
             analysis_text = LLM_OUTPUT_SECTION_ANALYSIS
             
         doc.add_paragraph(analysis_text)
