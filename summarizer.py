@@ -39,6 +39,9 @@ def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_l
 
     # Go through each column (question) in the data
     for col in df.columns:
+        # Get column letter like A, B, C...
+        col_letter = colnum_to_excel(df.columns.get_loc(col))  
+
         ctrl_kw = control_map.get(col, QTYPE_CLOSED)
 
         # Skip if the question is open or marked to ignore
@@ -46,7 +49,8 @@ def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_l
             continue
 
         # Write the question title
-        ws.write(row, 0, f"Question: {col}", title_fmt)
+        ws.write(row, 0, f"[{col_letter}] {col}", title_fmt)
+        #ws.write(row, 0, f"Question: {col}", title_fmt)
         row += 1
 
         # Clean and count answers based on question type
@@ -81,7 +85,6 @@ def summarize_df_to_excel_and_charts(df: pd.DataFrame, writer, workbook, sheet_l
         pct = to_percentages(counts_capped)
 
         # Save chart data for later AI analysis
-        col_letter = colnum_to_excel(df.columns.get_loc(col))  # Get column letter like A, B, C...
         chart_data_map[col_letter] = pct.to_dict()
 
         # Move "Outros" to the bottom of the list
